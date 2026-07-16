@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ค้นสินค้า — สต๊อกเครื่องเขียน</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">#</span>
+        <span class="brand-text">ค้นสินค้า</span>
+      </div>
+      <div class="count-badge" id="resultCount">191 รายการ</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="search-panel">
+      <label class="search-label" for="searchInput">พิมพ์รหัส / ชื่อสินค้า / ลำดับ</label>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" placeholder="เช่น 130 หรือ กรรไกร หรือ VS195" autocomplete="off" spellcheck="false">
+        <button class="clear-btn" id="clearBtn" aria-label="ล้างคำค้นหา" hidden>✕</button>
+      </div>
+      <div class="quick-filters" id="quickFilters">
+        <button class="chip" data-filter="">ทั้งหมด</button>
+        <button class="chip" data-filter="ปากกา">ปากกา</button>
+        <button class="chip" data-filter="กรรไกร">กรรไกร</button>
+        <button class="chip" data-filter="เทป">เทป</button>
+        <button class="chip" data-filter="แฟ้ม">แฟ้ม</button>
+        <button class="chip" data-filter="กระดาษ">กระดาษ</button>
+        <button class="chip" data-filter="เครื่องคิดเลข">เครื่องคิดเลข</button>
+      </div>
+    </section>
+
+    <section class="table-section">
+      <div class="table-scroll">
+        <table id="productTable">
+          <thead>
+            <tr>
+              <th class="col-no sortable" data-sort="no">ลำดับ <span class="sort-arrow"></span></th>
+              <th class="col-code sortable" data-sort="code">รหัสสินค้า <span class="sort-arrow"></span></th>
+              <th class="col-name sortable" data-sort="name">รายการสินค้า <span class="sort-arrow"></span></th>
+              <th class="col-unit">หน่วย</th>
+              <th class="col-price sortable" data-sort="price">จำนวนสินค้า <span class="sort-arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- rows injected by script.js -->
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState" hidden>
+        <p class="empty-title">ไม่พบสินค้าที่ตรงกับ "<span id="emptyQuery"></span>"</p>
+        <p class="empty-sub">ลองพิมพ์คำสั้นลง หรือค้นด้วยรหัสสินค้าแทน</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer-note">
+    ผลลัพธ์เรียงตามความใกล้เคียงกับคำค้นหาโดยอัตโนมัติ · แตะหัวตารางเพื่อจัดเรียง
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
