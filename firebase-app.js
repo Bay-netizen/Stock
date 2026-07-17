@@ -131,13 +131,18 @@ function listenHistory(onData, onError) {
 // Atomically read-modify-write the stock qty and log a history entry in the
 // same transaction, so two people adjusting the same item at the same
 // moment can never clobber each other's change.
-function fbAdjustQty(code, delta, meta) {
+function fbAdjustQty(code, delta, meta, seedQty) {
   const stockRef = db.collection(STOCK_COLLECTION).doc(code);
   const historyRef = db.collection(HISTORY_COLLECTION).doc();
 
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(stockRef);
-    const before = snap.exists ? (snap.data().qty || 0) : 0;
+    // If this product has never been written to Firestore before, don't
+    // silently treat its "before" quantity as 0 — that would wipe stock
+    // to 0 the first time anyone subtracts, regardless of what the app
+    // was actually displaying. Fall back to the seed quantity the caller
+    // saw on screen (originally sourced from data.js) instead.
+    const before = snap.exists ? (snap.data().qty || 0) : (typeof seedQty === 'number' ? seedQty : 0);
     let after = before + delta;
     if (after < 0) after = 0;
     const actualDelta = after - before;

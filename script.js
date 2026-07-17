@@ -286,7 +286,7 @@ async function applyDelta(product, delta, note) {
     unit: product.unit,
     note: note || '',
     userEmail: currentUser ? currentUser.email : ''
-  });
+  }, getQty(product.code));
 
   return after;
 }
