@@ -8,116 +8,153 @@
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
+  <!-- ============================================
+       Shown briefly while we check if you're logged in
+       ============================================ -->
+  <div class="login-screen" id="authCheckScreen">
+    <div class="login-card auth-check-card">
+      <div class="login-brand">
         <span class="brand-mark">#</span>
-        <span class="brand-text">ค้นสินค้า</span>
+        <span class="brand-text">สต๊อกเครื่องเขียน</span>
       </div>
-      <div class="topbar-actions">
-        <button class="history-all-btn" id="historyAllBtn">ประวัติทั้งหมด</button>
-        <div class="count-badge" id="resultCount">191 รายการ</div>
-      </div>
+      <p class="login-sub">กำลังตรวจสอบสิทธิ์การเข้าใช้งาน...</p>
     </div>
-  </header>
+  </div>
 
-  <main class="wrap">
+  <!-- ============================================
+       Main app (hidden until logged in)
+       ============================================ -->
+  <div class="app-root" id="appRoot" hidden>
 
-    <section class="search-panel">
-      <label class="search-label" for="searchInput">พิมพ์รหัส / ชื่อสินค้า / ลำดับ</label>
-      <div class="search-box">
-        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="7"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="searchInput" placeholder="เช่น 130 หรือ กรรไกร หรือ VS195" autocomplete="off" spellcheck="false">
-        <button class="clear-btn" id="clearBtn" aria-label="ล้างคำค้นหา" hidden>✕</button>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-mark">#</span>
+          <span class="brand-text">ค้นสินค้า</span>
+        </div>
+        <div class="topbar-actions">
+          <span class="user-badge" id="userBadge"></span>
+          <button class="history-all-btn" id="historyAllBtn">ประวัติ</button>
+          <button class="logout-btn" id="logoutBtn" aria-label="ออกจากระบบ">ออกจากระบบ</button>
+          <div class="count-badge" id="resultCount">191 รายการ</div>
+        </div>
       </div>
-      <div class="quick-filters" id="quickFilters">
-        <button class="chip" data-filter="">ทั้งหมด</button>
-        <button class="chip" data-filter="ปากกา">ปากกา</button>
-        <button class="chip" data-filter="กรรไกร">กรรไกร</button>
-        <button class="chip" data-filter="เทป">เทป</button>
-        <button class="chip" data-filter="แฟ้ม">แฟ้ม</button>
-        <button class="chip" data-filter="กระดาษ">กระดาษ</button>
-        <button class="chip" data-filter="เครื่องคิดเลข">เครื่องคิดเลข</button>
-      </div>
-    </section>
+    </header>
 
-    <section class="table-section">
-      <div class="table-scroll">
-        <table id="productTable">
-          <thead>
-            <tr>
-              <th class="col-no sortable" data-sort="no">ลำดับ <span class="sort-arrow"></span></th>
-              <th class="col-code sortable" data-sort="code">รหัสสินค้า <span class="sort-arrow"></span></th>
-              <th class="col-name sortable" data-sort="name">รายการสินค้า <span class="sort-arrow"></span></th>
-              <th class="col-unit">หน่วย</th>
-              <th class="col-qty sortable" data-sort="qty">จำนวน <span class="sort-arrow"></span></th>
-              <th class="col-actions">ปรับจำนวน</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <!-- rows injected by script.js -->
-          </tbody>
-        </table>
-      </div>
-      <div class="empty-state" id="emptyState" hidden>
-        <p class="empty-title">ไม่พบสินค้าที่ตรงกับ "<span id="emptyQuery"></span>"</p>
-        <p class="empty-sub">ลองพิมพ์คำสั้นลง หรือค้นด้วยรหัสสินค้าแทน</p>
-      </div>
-    </section>
+    <main class="wrap">
 
-  </main>
+      <div class="sync-banner" id="syncBanner" hidden>กำลังซิงค์ข้อมูล...</div>
 
-  <footer class="footer-note">
-    ผลลัพธ์เรียงตามความใกล้เคียงกับคำค้นหาโดยอัตโนมัติ · แตะหัวตารางเพื่อจัดเรียง · จำนวนบันทึกอัตโนมัติในเบราว์เซอร์นี้
-  </footer>
+      <section class="search-panel">
+        <label class="search-label" for="searchInput">พิมพ์รหัส / ชื่อสินค้า / ลำดับ</label>
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="เช่น 130 หรือ กรรไกร หรือ VS195" autocomplete="off" spellcheck="false">
+          <button class="clear-btn" id="clearBtn" aria-label="ล้างคำค้นหา" hidden>✕</button>
+        </div>
+        <div class="quick-filters" id="quickFilters">
+          <button class="chip" data-filter="">ทั้งหมด</button>
+          <button class="chip" data-filter="ปากกา">ปากกา</button>
+          <button class="chip" data-filter="กรรไกร">กรรไกร</button>
+          <button class="chip" data-filter="เทป">เทป</button>
+          <button class="chip" data-filter="แฟ้ม">แฟ้ม</button>
+          <button class="chip" data-filter="กระดาษ">กระดาษ</button>
+          <button class="chip" data-filter="เครื่องคิดเลข">เครื่องคิดเลข</button>
+        </div>
+      </section>
 
-  <!-- Manual adjust modal -->
-  <div class="modal-overlay" id="adjustOverlay" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adjustTitle">
-      <div class="modal-head">
-        <h3 id="adjustTitle">ปรับจำนวน</h3>
-        <button class="modal-close" id="adjustClose" aria-label="ปิด">✕</button>
-      </div>
-      <p class="modal-product" id="adjustProductName"></p>
-      <p class="modal-current">จำนวนปัจจุบัน: <strong id="adjustCurrentQty">0</strong> <span id="adjustUnit"></span></p>
-      <div class="modal-toggle">
-        <button class="toggle-btn active" data-mode="in" id="modeIn">ของเข้า (+)</button>
-        <button class="toggle-btn" data-mode="out" id="modeOut">ของออก (−)</button>
-      </div>
-      <div class="modal-input-row">
-        <input type="number" id="adjustAmount" min="0" step="1" placeholder="จำนวน" inputmode="numeric">
-        <input type="text" id="adjustNote" placeholder="หมายเหตุ (ไม่บังคับ) เช่น รับของจากผู้ผลิต">
-      </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" id="adjustCancel">ยกเลิก</button>
-        <button class="btn-primary" id="adjustConfirm">บันทึก</button>
-      </div>
+      <section class="table-section">
+        <div class="table-scroll">
+          <table id="productTable">
+            <thead>
+              <tr>
+                <th class="col-no sortable" data-sort="no">ลำดับ <span class="sort-arrow"></span></th>
+                <th class="col-code sortable" data-sort="code">รหัสสินค้า <span class="sort-arrow"></span></th>
+                <th class="col-name sortable" data-sort="name">รายการสินค้า <span class="sort-arrow"></span></th>
+                <th class="col-unit">หน่วย</th>
+                <th class="col-qty sortable" data-sort="qty">จำนวน <span class="sort-arrow"></span></th>
+                <th class="col-actions">ปรับจำนวน</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- rows injected by script.js -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" hidden>
+          <p class="empty-title">ไม่พบสินค้าที่ตรงกับ "<span id="emptyQuery"></span>"</p>
+          <p class="empty-sub">ลองพิมพ์คำสั้นลง หรือค้นด้วยรหัสสินค้าแทน</p>
+        </div>
+      </section>
 
-      <div class="modal-history">
-        <h4>ประวัติล่าสุด</h4>
-        <div class="history-list" id="historyList">
-          <p class="history-empty" id="historyEmpty">ยังไม่มีประวัติ</p>
+    </main>
+
+    <footer class="footer-note">
+      ผลลัพธ์เรียงตามความใกล้เคียงกับคำค้นหาโดยอัตโนมัติ · แตะหัวตารางเพื่อจัดเรียง · ข้อมูลซิงค์กับทุกอุปกรณ์แบบเรียลไทม์
+    </footer>
+
+    <!-- Manual adjust modal -->
+    <div class="modal-overlay" id="adjustOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adjustTitle">
+        <div class="modal-head">
+          <h3 id="adjustTitle">ปรับจำนวน</h3>
+          <button class="modal-close" id="adjustClose" aria-label="ปิด">✕</button>
+        </div>
+        <p class="modal-product" id="adjustProductName"></p>
+        <p class="modal-current">จำนวนปัจจุบัน: <strong id="adjustCurrentQty">0</strong> <span id="adjustUnit"></span></p>
+        <div class="modal-toggle">
+          <button class="toggle-btn active" data-mode="in" id="modeIn">ของเข้า (+)</button>
+          <button class="toggle-btn" data-mode="out" id="modeOut">ของออก (−)</button>
+        </div>
+        <div class="modal-input-row">
+          <input type="number" id="adjustAmount" min="0" step="1" placeholder="จำนวน" inputmode="numeric">
+          <input type="text" id="adjustNote" placeholder="หมายเหตุ (ไม่บังคับ) เช่น รับของจากผู้ผลิต">
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" id="adjustCancel">ยกเลิก</button>
+          <button class="btn-primary" id="adjustConfirm">บันทึก</button>
+        </div>
+
+        <div class="modal-history">
+          <h4>ประวัติล่าสุดของรายการนี้</h4>
+          <div class="history-list" id="historyList">
+            <p class="history-empty">ยังไม่มีประวัติ</p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- All-history modal -->
-  <div class="modal-overlay" id="allHistoryOverlay" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="allHistoryTitle">
-      <div class="modal-head">
-        <h3 id="allHistoryTitle">ประวัติเข้า-ออกทั้งหมด</h3>
-        <button class="modal-close" id="allHistoryClose" aria-label="ปิด">✕</button>
-      </div>
-      <div class="history-list history-list-tall" id="allHistoryList">
-        <p class="history-empty">ยังไม่มีประวัติ</p>
+    <!-- All-history modal -->
+    <div class="modal-overlay" id="allHistoryOverlay" hidden>
+      <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="allHistoryTitle">
+        <div class="modal-head">
+          <h3 id="allHistoryTitle">ประวัติเข้า-ออก</h3>
+          <button class="modal-close" id="allHistoryClose" aria-label="ปิด">✕</button>
+        </div>
+        <div class="history-tabs" id="historyTabs">
+          <button class="history-tab active" data-range="today">วันนี้</button>
+          <button class="history-tab" data-range="week">7 วันล่าสุด</button>
+          <button class="history-tab" data-range="all">ทั้งหมด</button>
+        </div>
+        <div class="history-summary" id="historySummary"></div>
+        <div class="history-list history-list-tall" id="allHistoryList">
+          <p class="history-empty">ยังไม่มีประวัติ</p>
+        </div>
       </div>
     </div>
+
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="firebase-app.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>
 </body>

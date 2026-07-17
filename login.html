@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ — สต๊อกเครื่องเขียน</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-mark">#</span>
+        <span class="brand-text">สต๊อกเครื่องเขียน</span>
+      </div>
+      <p class="login-sub" id="formSub">เข้าสู่ระบบเพื่อจัดการจำนวนสินค้า</p>
+
+      <div class="modal-toggle login-mode-toggle">
+        <button class="toggle-btn active" data-mode="login" id="tabLogin">เข้าสู่ระบบ</button>
+        <button class="toggle-btn" data-mode="register" id="tabRegister">ลงทะเบียน</button>
+      </div>
+
+      <!-- Login form -->
+      <form id="loginForm" class="login-form">
+        <input type="email" id="loginEmail" placeholder="อีเมล" autocomplete="username" required>
+        <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+        <button type="submit" class="btn-primary login-submit" id="loginSubmit">เข้าสู่ระบบ</button>
+      </form>
+
+      <!-- Register form -->
+      <form id="registerForm" class="login-form" hidden>
+        <input type="email" id="registerEmail" placeholder="อีเมล" autocomplete="username" required>
+        <input type="password" id="registerPassword" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" autocomplete="new-password" required minlength="6">
+        <input type="password" id="registerPasswordConfirm" placeholder="ยืนยันรหัสผ่านอีกครั้ง" autocomplete="new-password" required minlength="6">
+        <button type="submit" class="btn-primary login-submit" id="registerSubmit">สร้างบัญชี</button>
+      </form>
+
+      <p class="login-error" id="formError" hidden></p>
+      <p class="login-success" id="formSuccess" hidden></p>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="firebase-app.js"></script>
+  <script src="login-script.js"></script>
+</body>
+</html>
