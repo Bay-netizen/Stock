@@ -4,41 +4,103 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เข้าสู่ระบบ — สต๊อกเครื่องเขียน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="login-screen" id="loginScreen">
-    <div class="login-card">
-      <div class="login-brand">
-        <span class="brand-mark">#</span>
-        <span class="brand-text">สต๊อกเครื่องเขียน</span>
+  <div class="auth-page">
+
+    <!-- ============================================
+         Left panel — brand identity
+         ============================================ -->
+    <div class="auth-panel-brand">
+      <div class="auth-brand-inner">
+        <div class="login-brand auth-brand-mark">
+          <span class="brand-mark">#</span>
+          <span class="brand-text">สต๊อกเครื่องเขียน</span>
+        </div>
+        <p class="auth-tagline">เช็คของ นับสต๊อก บันทึกเข้า-ออก<br>ซิงค์ทุกเครื่องแบบเรียลไทม์</p>
+
+        <div class="ledger-preview" aria-hidden="true">
+          <div class="ledger-preview-row ledger-preview-head">
+            <span>รหัส</span><span>รายการ</span><span>จำนวน</span>
+          </div>
+          <div class="ledger-preview-row">
+            <span>130860</span><span>กรรไกรตัดกระดาษ</span><span class="lp-qty-ok">84</span>
+          </div>
+          <div class="ledger-preview-row">
+            <span>123899</span><span>เทปสีกากี</span><span class="lp-qty-low">3</span>
+          </div>
+          <div class="ledger-preview-row">
+            <span>130936</span><span>ปากกาลูกลื่น 10สี</span><span class="lp-qty-ok">60</span>
+          </div>
+        </div>
+
+        <div class="auth-status-pill">
+          <span class="status-dot"></span> ซิงค์ข้อมูลเรียลไทม์ทุกอุปกรณ์
+        </div>
       </div>
-      <p class="login-sub" id="formSub">เข้าสู่ระบบเพื่อจัดการจำนวนสินค้า</p>
-
-      <div class="modal-toggle login-mode-toggle">
-        <button class="toggle-btn active" data-mode="login" id="tabLogin">เข้าสู่ระบบ</button>
-        <button class="toggle-btn" data-mode="register" id="tabRegister">ลงทะเบียน</button>
-      </div>
-
-      <!-- Login form -->
-      <form id="loginForm" class="login-form">
-        <input type="email" id="loginEmail" placeholder="อีเมล" autocomplete="username" required>
-        <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="current-password" required>
-        <button type="submit" class="btn-primary login-submit" id="loginSubmit">เข้าสู่ระบบ</button>
-      </form>
-
-      <!-- Register form -->
-      <form id="registerForm" class="login-form" hidden>
-        <input type="email" id="registerEmail" placeholder="อีเมล" autocomplete="username" required>
-        <input type="password" id="registerPassword" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" autocomplete="new-password" required minlength="6">
-        <input type="password" id="registerPasswordConfirm" placeholder="ยืนยันรหัสผ่านอีกครั้ง" autocomplete="new-password" required minlength="6">
-        <button type="submit" class="btn-primary login-submit" id="registerSubmit">สร้างบัญชี</button>
-      </form>
-
-      <p class="login-error" id="formError" hidden></p>
-      <p class="login-success" id="formSuccess" hidden></p>
     </div>
+
+    <!-- ============================================
+         Right panel — login / register form
+         ============================================ -->
+    <div class="auth-panel-form">
+      <div class="login-card auth-card">
+        <p class="login-sub" id="formSub">เข้าสู่ระบบเพื่อจัดการจำนวนสินค้า</p>
+
+        <div class="modal-toggle login-mode-toggle">
+          <button class="toggle-btn active" data-mode="login" id="tabLogin">เข้าสู่ระบบ</button>
+          <button class="toggle-btn" data-mode="register" id="tabRegister">ลงทะเบียน</button>
+        </div>
+
+        <!-- Login form -->
+        <form id="loginForm" class="login-form">
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            <input type="email" id="loginEmail" placeholder="อีเมล" autocomplete="username" required>
+          </div>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+            <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <button type="submit" class="btn-primary login-submit" id="loginSubmit">เข้าสู่ระบบ</button>
+        </form>
+
+        <!-- Register form -->
+        <form id="registerForm" class="login-form" hidden>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            <input type="email" id="registerEmail" placeholder="อีเมล" autocomplete="username" required>
+          </div>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input type="password" id="registerPassword" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" autocomplete="new-password" required minlength="6">
+            <button type="button" class="pw-toggle" data-target="registerPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input type="password" id="registerPasswordConfirm" placeholder="ยืนยันรหัสผ่านอีกครั้ง" autocomplete="new-password" required minlength="6">
+            <button type="button" class="pw-toggle" data-target="registerPasswordConfirm" aria-label="แสดง/ซ่อนรหัสผ่าน">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <button type="submit" class="btn-primary login-submit" id="registerSubmit">สร้างบัญชี</button>
+        </form>
+
+        <p class="login-error" id="formError" hidden></p>
+        <p class="login-success" id="formSuccess" hidden></p>
+      </div>
+    </div>
+
   </div>
 
   <!-- Firebase SDK -->

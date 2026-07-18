@@ -7,7 +7,6 @@ let qtyMap = {};          // { code: qty }  — populated from Firestore in real
 let history = [];         // [{ code, name, unit, delta, mode, note, after, ts, userEmail }]
 let activeAdjustCode = null;
 let adjustMode = 'in';
-let currentHistoryRange = 'today';
 let currentUser = null;
 
 let unsubStock = null;
@@ -44,10 +43,16 @@ const modeOutBtn = document.getElementById('modeOut');
 const historyList = document.getElementById('historyList');
 
 const allHistoryOverlay = document.getElementById('allHistoryOverlay');
-const allHistoryList = document.getElementById('allHistoryList');
-const historySummary = document.getElementById('historySummary');
 const historyAllBtn = document.getElementById('historyAllBtn');
-const historyTabs = document.getElementById('historyTabs');
+const calGrid = document.getElementById('calGrid');
+const calMonthLabel = document.getElementById('calMonthLabel');
+const calPrevBtn = document.getElementById('calPrevBtn');
+const calNextBtn = document.getElementById('calNextBtn');
+const calDayDetail = document.getElementById('calDayDetail');
+const calToggleBtn = document.getElementById('calToggleBtn');
+const calToggleLabel = document.getElementById('calToggleLabel');
+const calToggleChevron = document.getElementById('calToggleChevron');
+const calCollapse = document.getElementById('calCollapse');
 
 /* ============================================
    Auth flow — this page requires a logged-in user.
@@ -91,7 +96,7 @@ function startListeners() {
     historyLoaded = true;
     updateSyncBanner();
     if (!adjustOverlay.hidden && activeAdjustCode) renderHistoryFor(activeAdjustCode);
-    if (!allHistoryOverlay.hidden) renderAllHistory();
+    if (!allHistoryOverlay.hidden) { renderCalendar(); renderDayDetail(); }
   }, (err) => console.error('อ่านประวัติไม่สำเร็จ', err));
 }
 
@@ -149,6 +154,18 @@ function formatDateHeader(ts) {
   return d.toLocaleDateString('th-TH', {
     day: '2-digit', month: 'long', year: 'numeric'
   });
+}
+
+function formatDayNumber(ts) {
+  return new Date(ts).toLocaleDateString('th-TH', { day: '2-digit' });
+}
+
+function formatMonthShort(ts) {
+  return new Date(ts).toLocaleDateString('th-TH', { month: 'short' });
+}
+
+function formatWeekday(ts) {
+  return new Date(ts).toLocaleDateString('th-TH', { weekday: 'long' });
 }
 
 function isSameDay(ts1, ts2) {
@@ -434,87 +451,165 @@ function entryHtml(h) {
 }
 
 /* ============================================
-   All-history modal (date-grouped, tabbed by range)
+   All-history modal — compact monthly calendar.
+   Each day is one small cell with dot counts for
+   เข้า/ออก; tapping a day shows its entries below
+   instead of a long stacked list of cards.
    ============================================ */
-function getHistoryForRange(range) {
-  const now = Date.now();
-  if (range === 'today') {
-    return history.filter(h => isSameDay(h.ts, now));
-  }
-  if (range === 'week') {
-    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    return history.filter(h => h.ts >= weekAgo);
-  }
-  return history;
+let calViewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let calSelectedKey = null; // 'YYYY-MM-DD'
+
+function dayKey(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function renderAllHistory() {
-  const entries = getHistoryForRange(currentHistoryRange);
+function buildDayMap(entries) {
+  const map = {};
+  entries.forEach(h => {
+    const key = dayKey(h.ts);
+    if (!map[key]) map[key] = { in: 0, out: 0 };
+    map[key][h.mode]++;
+  });
+  return map;
+}
 
-  const inCount = entries.filter(h => h.mode === 'in').length;
-  const outCount = entries.filter(h => h.mode === 'out').length;
-  historySummary.textContent = entries.length
-    ? `ของเข้า ${inCount} ครั้ง · ของออก ${outCount} ครั้ง · รวม ${entries.length} รายการ`
-    : '';
+function renderCalendar() {
+  const dayMap = buildDayMap(history);
 
-  if (entries.length === 0) {
-    allHistoryList.innerHTML = '<p class="history-empty">ไม่มีประวัติในช่วงนี้</p>';
+  const year = calViewDate.getFullYear();
+  const month = calViewDate.getMonth();
+  calMonthLabel.textContent = calViewDate.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+
+  const startOffset = new Date(year, month, 1).getDay(); // 0 = Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = dayKey(Date.now());
+
+  let cellsHtml = '';
+  for (let i = 0; i < startOffset; i++) {
+    cellsHtml += '<div class="cal-cell cal-cell-empty"></div>';
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dayKey(new Date(year, month, d).getTime());
+    const data = dayMap[key];
+    const classes = ['cal-cell'];
+    if (key === todayKey) classes.push('cal-cell-today');
+    if (key === calSelectedKey) classes.push('cal-cell-selected');
+    if (data) classes.push('cal-cell-has-data');
+
+    cellsHtml += `
+      <button class="${classes.join(' ')}" data-key="${key}" ${data ? '' : 'disabled tabindex="-1"'}>
+        <span class="cal-cell-num">${d}</span>
+        ${data ? `
+          <span class="cal-cell-dots">
+            ${data.in ? `<span class="cal-dot cal-dot-in">${data.in}</span>` : ''}
+            ${data.out ? `<span class="cal-dot cal-dot-out">${data.out}</span>` : ''}
+          </span>
+        ` : ''}
+      </button>
+    `;
+  }
+
+  calGrid.innerHTML = cellsHtml;
+
+  calGrid.querySelectorAll('.cal-cell-has-data').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calSelectedKey = cell.dataset.key;
+      renderCalendar();
+      renderDayDetail();
+      setCalCollapsed(true); // fold the grid back up once a day is picked
+    });
+  });
+}
+
+function setCalCollapsed(collapsed) {
+  calCollapse.hidden = collapsed;
+  calToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  calToggleChevron.classList.toggle('cal-toggle-chevron-open', !collapsed);
+}
+
+function renderDayDetail() {
+  if (!calSelectedKey) {
+    calDayDetail.innerHTML = '<p class="history-empty">แตะวันที่เพื่อดูรายการ</p>';
+    calToggleLabel.textContent = 'เลือกวันที่';
     return;
   }
 
-  // Group by date (entries already sorted desc by ts from Firestore query)
-  const groups = [];
-  let currentGroup = null;
-  entries.forEach(h => {
-    if (!currentGroup || !isSameDay(currentGroup.ts, h.ts)) {
-      currentGroup = { ts: h.ts, items: [] };
-      groups.push(currentGroup);
-    }
-    currentGroup.items.push(h);
-  });
+  const entries = history
+    .filter(h => dayKey(h.ts) === calSelectedKey)
+    .sort((a, b) => b.ts - a.ts);
 
-  const today = Date.now();
-  allHistoryList.innerHTML = groups.map(g => {
-    const label = isSameDay(g.ts, today) ? `วันนี้ · ${formatDateHeader(g.ts)}` : formatDateHeader(g.ts);
-    const itemsHtml = g.items.map(h => `
-      <div class="history-entry ${h.mode}">
-        <div class="history-entry-left">
-          <span class="history-entry-name">${escapeHtml(h.name)}</span>
-          <span class="history-entry-note">${h.note ? escapeHtml(h.note) : (h.mode === 'in' ? 'ของเข้า' : 'ของออก')} · ${escapeHtml(h.code)}</span>
-          <span class="history-entry-time">${formatTime(h.ts)}${h.userEmail ? ' · ' + escapeHtml(h.userEmail.split('@')[0]) : ''}</span>
-        </div>
-        <div class="history-entry-right">
-          <span class="history-entry-delta">${h.delta >= 0 ? '+' : ''}${h.delta}</span>
-          <span class="history-entry-after">คงเหลือ ${h.after}</span>
-        </div>
-      </div>
-    `).join('');
+  const [y, m, d] = calSelectedKey.split('-').map(Number);
+  const labelDate = new Date(y, m - 1, d);
+  const todayKey = dayKey(Date.now());
+  const yesterdayKey = dayKey(Date.now() - 24 * 60 * 60 * 1000);
 
-    return `
-      <div class="history-date-group">
-        <div class="history-date-header">${label}</div>
-        ${itemsHtml}
+  let dayTag = formatWeekday(labelDate.getTime());
+  if (calSelectedKey === todayKey) dayTag = 'วันนี้';
+  else if (calSelectedKey === yesterdayKey) dayTag = 'เมื่อวาน';
+
+  calToggleLabel.textContent = `${dayTag} · ${formatDayNumber(labelDate.getTime())} ${formatMonthShort(labelDate.getTime())}`;
+
+  if (entries.length === 0) {
+    calDayDetail.innerHTML = '<p class="history-empty">ไม่มีประวัติในวันนี้</p>';
+    return;
+  }
+
+  const dayIn = entries.filter(h => h.mode === 'in').length;
+  const dayOut = entries.filter(h => h.mode === 'out').length;
+
+  const itemsHtml = entries.map(h => `
+    <div class="history-entry ${h.mode}">
+      <div class="history-entry-left">
+        <span class="history-entry-name">${escapeHtml(h.name)}</span>
+        <span class="history-entry-note">${h.note ? escapeHtml(h.note) : (h.mode === 'in' ? 'ของเข้า' : 'ของออก')} · ${escapeHtml(h.code)}</span>
+        <span class="history-entry-time">${formatTime(h.ts)}${h.userEmail ? ' · ' + escapeHtml(h.userEmail.split('@')[0]) : ''}</span>
       </div>
-    `;
-  }).join('');
+      <div class="history-entry-right">
+        <span class="history-entry-delta">${h.delta >= 0 ? '+' : ''}${h.delta}</span>
+        <span class="history-entry-after">คงเหลือ ${h.after}</span>
+      </div>
+    </div>
+  `).join('');
+
+  calDayDetail.innerHTML = `
+    <div class="cal-day-detail-head">
+      <span class="cal-day-detail-label">${dayTag} · ${formatDayNumber(labelDate.getTime())} ${formatMonthShort(labelDate.getTime())}</span>
+      <span class="cal-day-detail-counts">เข้า ${dayIn} · ออก ${dayOut}</span>
+    </div>
+    <div class="cal-day-detail-list">${itemsHtml}</div>
+  `;
 }
 
 function openAllHistory() {
-  currentHistoryRange = 'today';
-  document.querySelectorAll('.history-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.range === 'today');
-  });
-  renderAllHistory();
+  // Jump to the month/day of the most recent entry (list is sorted desc),
+  // falling back to the current month if there's no history yet.
+  if (history.length > 0) {
+    const latestTs = history[0].ts;
+    const d = new Date(latestTs);
+    calViewDate = new Date(d.getFullYear(), d.getMonth(), 1);
+    calSelectedKey = dayKey(latestTs);
+  } else {
+    calViewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    calSelectedKey = null;
+  }
+  renderCalendar();
+  renderDayDetail();
+  setCalCollapsed(true); // start folded — just show the day's list, not the grid
   allHistoryOverlay.hidden = false;
 }
 
-historyTabs.addEventListener('click', (e) => {
-  const btn = e.target.closest('.history-tab');
-  if (!btn) return;
-  currentHistoryRange = btn.dataset.range;
-  document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  renderAllHistory();
+calPrevBtn.addEventListener('click', () => {
+  calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() - 1, 1);
+  renderCalendar();
+});
+calNextBtn.addEventListener('click', () => {
+  calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() + 1, 1);
+  renderCalendar();
+});
+
+calToggleBtn.addEventListener('click', () => {
+  setCalCollapsed(!calCollapse.hidden);
 });
 
 historyAllBtn.addEventListener('click', openAllHistory);

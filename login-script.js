@@ -21,6 +21,19 @@ const registerSubmit = document.getElementById('registerSubmit');
 let mode = 'login';
 
 /* ============================================
+   Password visibility toggles
+   ============================================ */
+document.querySelectorAll('.pw-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = document.getElementById(btn.dataset.target);
+    const showing = target.type === 'text';
+    target.type = showing ? 'password' : 'text';
+    target.classList.toggle('pw-revealed', !showing);
+    btn.classList.toggle('active', !showing);
+  });
+});
+
+/* ============================================
    If already logged in, skip straight to the app.
    ============================================ */
 onAuthChange((user) => {
