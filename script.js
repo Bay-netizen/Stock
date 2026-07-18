@@ -9,6 +9,13 @@ let activeAdjustCode = null;
 let adjustMode = 'in';
 let currentUser = null;
 
+// Only this account is allowed to adjust quantities. Everyone else gets a
+// read-only view — no +/- or "แก้ไข" buttons.
+const EDITOR_EMAIL = 'ruok512345@gmail.com';
+function isEditor() {
+  return !!currentUser && currentUser.email === EDITOR_EMAIL;
+}
+
 let unsubStock = null;
 let unsubHistory = null;
 let stockLoaded = false;
@@ -280,11 +287,13 @@ function render() {
       <td class="col-unit">${escapeHtml(p.unit)}</td>
       <td class="col-qty ${qtyClass}" data-qty-cell="${p.code}">${qty}</td>
       <td class="col-actions">
-        <div class="qty-controls">
-          <button class="qty-btn qty-minus" data-action="dec" data-code="${p.code}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
-          <button class="qty-btn qty-plus" data-action="inc" data-code="${p.code}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
-          <button class="qty-detail-btn" data-action="detail" data-code="${p.code}">แก้ไข</button>
-        </div>
+        ${isEditor() ? `
+          <div class="qty-controls">
+            <button class="qty-btn qty-minus" data-action="dec" data-code="${p.code}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
+            <button class="qty-btn qty-plus" data-action="inc" data-code="${p.code}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
+            <button class="qty-detail-btn" data-action="detail" data-code="${p.code}">แก้ไข</button>
+          </div>
+        ` : ''}
       </td>
     </tr>
   `;
@@ -314,6 +323,7 @@ async function applyDelta(product, delta, note) {
 tableBody.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
+  if (!isEditor()) return; // read-only account — buttons shouldn't even exist, but block just in case
 
   const code = btn.dataset.code;
   const product = PRODUCTS.find(p => p.code === code);
