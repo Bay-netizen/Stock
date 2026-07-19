@@ -5,6 +5,8 @@ let currentQuery = '';
 let currentSort = { key: 'no', dir: 'asc' };
 let qtyMap = {};          // { code: qty }  — populated from Firestore in realtime
 let history = [];         // [{ code, name, unit, delta, mode, note, after, ts, userEmail }]
+let dynamicProducts = []; // products added at runtime via the admin "add product" modal
+let ALL_PRODUCTS = PRODUCTS.slice(); // static list from data.js + dynamicProducts, rebuilt on change
 let activeAdjustCode = null;
 let adjustMode = 'in';
 let currentUser = null;
@@ -16,8 +18,13 @@ function isEditor() {
   return !!currentUser && currentUser.email === EDITOR_EMAIL;
 }
 
+// Extra PIN required (on top of being the editor account) to add a brand
+// new product — change this to whatever code you want to give staff.
+const ADD_PRODUCT_PIN = '112233';
+
 let unsubStock = null;
 let unsubHistory = null;
+let unsubProducts = null;
 let stockLoaded = false;
 let historyLoaded = false;
 
@@ -61,6 +68,22 @@ const calToggleLabel = document.getElementById('calToggleLabel');
 const calToggleChevron = document.getElementById('calToggleChevron');
 const calCollapse = document.getElementById('calCollapse');
 
+const addProductBtn = document.getElementById('addProductBtn');
+const addProductOverlay = document.getElementById('addProductOverlay');
+const addProductStep1 = document.getElementById('addProductStep1');
+const addProductStep2 = document.getElementById('addProductStep2');
+const newProductCode = document.getElementById('newProductCode');
+const newProductName = document.getElementById('newProductName');
+const newProductUnit = document.getElementById('newProductUnit');
+const newProductQty = document.getElementById('newProductQty');
+const addProductStep1Error = document.getElementById('addProductStep1Error');
+const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
+const addProductError = document.getElementById('addProductError');
+const addProductSuccess = document.getElementById('addProductSuccess');
+const addProductNext = document.getElementById('addProductNext');
+const addProductBack = document.getElementById('addProductBack');
+const addProductConfirm = document.getElementById('addProductConfirm');
+
 /* ============================================
    Auth flow — this page requires a logged-in user.
    If nobody is logged in, bounce to login.html.
@@ -72,6 +95,7 @@ onAuthChange((user) => {
     authCheckScreen.hidden = true;
     appRoot.hidden = false;
     userBadge.textContent = user.email;
+    addProductBtn.hidden = !isEditor();
     startListeners();
   } else {
     stopListeners();
@@ -105,13 +129,37 @@ function startListeners() {
     if (!adjustOverlay.hidden && activeAdjustCode) renderHistoryFor(activeAdjustCode);
     if (!allHistoryOverlay.hidden) { renderCalendar(); renderDayDetail(); }
   }, (err) => console.error('อ่านประวัติไม่สำเร็จ', err));
+
+  unsubProducts = listenProducts((list) => {
+    dynamicProducts = list;
+    rebuildAllProducts();
+    render();
+  }, (err) => console.error('อ่านรายการสินค้าที่เพิ่มไม่สำเร็จ', err));
 }
 
 function stopListeners() {
   if (unsubStock) { unsubStock(); unsubStock = null; }
   if (unsubHistory) { unsubHistory(); unsubHistory = null; }
+  if (unsubProducts) { unsubProducts(); unsubProducts = null; }
   qtyMap = {};
   history = [];
+  dynamicProducts = [];
+  rebuildAllProducts();
+}
+
+// Merge the static catalog (data.js) with admin-added products, numbering
+// the added ones after the last static "no" so they sort in at the end
+// unless the person searches or sorts by name/code/qty.
+function rebuildAllProducts() {
+  const maxNo = PRODUCTS.reduce((m, p) => Math.max(m, p.no), 0);
+  const extra = dynamicProducts.map((p, i) => ({
+    no: maxNo + i + 1,
+    code: p.code,
+    name: p.name,
+    unit: p.unit,
+    qty: 0 // real qty always comes from qtyMap via getQty()
+  }));
+  ALL_PRODUCTS = PRODUCTS.concat(extra);
 }
 
 function updateSyncBanner() {
@@ -125,7 +173,7 @@ function getQty(code) {
   if (Object.prototype.hasOwnProperty.call(qtyMap, code)) {
     return qtyMap[code];
   }
-  const product = PRODUCTS.find(p => p.code === code);
+  const product = ALL_PRODUCTS.find(p => p.code === code);
   return product ? product.qty : 0;
 }
 
@@ -227,9 +275,9 @@ function getFilteredSorted() {
   let results;
 
   if (!currentQuery) {
-    results = PRODUCTS.map(p => ({ p, score: 0 }));
+    results = ALL_PRODUCTS.map(p => ({ p, score: 0 }));
   } else {
-    results = PRODUCTS
+    results = ALL_PRODUCTS
       .map(p => ({ p, score: scoreProduct(p, currentQuery) }))
       .filter(r => r.score !== null);
   }
@@ -326,7 +374,7 @@ tableBody.addEventListener('click', (e) => {
   if (!isEditor()) return; // read-only account — buttons shouldn't even exist, but block just in case
 
   const code = btn.dataset.code;
-  const product = PRODUCTS.find(p => p.code === code);
+  const product = ALL_PRODUCTS.find(p => p.code === code);
   if (!product) return;
 
   const action = btn.dataset.action;
@@ -394,7 +442,7 @@ modeOutBtn.addEventListener('click', () => {
 
 document.getElementById('adjustConfirm').addEventListener('click', () => {
   if (!activeAdjustCode) return;
-  const product = PRODUCTS.find(p => p.code === activeAdjustCode);
+  const product = ALL_PRODUCTS.find(p => p.code === activeAdjustCode);
   if (!product) return;
 
   const amountRaw = adjustAmount.value.trim();
@@ -703,6 +751,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (!adjustOverlay.hidden) closeAdjustModal();
     if (!allHistoryOverlay.hidden) allHistoryOverlay.hidden = true;
+    if (!addProductOverlay.hidden) closeAddProductModal();
   }
 });
 
@@ -711,3 +760,180 @@ document.addEventListener('keydown', (e) => {
    ============================================ */
 document.querySelector('.chip[data-filter=""]').classList.add('active');
 render();
+
+/* ============================================
+   Add-product modal (admin only) — step 1 collects
+   the product details, step 2 asks for the special
+   PIN as 6 individual digit boxes.
+   ============================================ */
+function openAddProductModal() {
+  if (!isEditor()) return;
+  newProductCode.value = '';
+  newProductName.value = '';
+  newProductUnit.value = '';
+  newProductQty.value = '';
+  addProductStep1Error.hidden = true;
+  showAddProductStep(1);
+  addProductOverlay.hidden = false;
+  setTimeout(() => newProductCode.focus(), 50);
+}
+
+function closeAddProductModal() {
+  addProductOverlay.hidden = true;
+}
+
+function showAddProductStep(step) {
+  addProductStep1.hidden = step !== 1;
+  addProductStep2.hidden = step !== 2;
+}
+
+function clearPinBoxes() {
+  pinBoxes.forEach(box => {
+    box.value = '';
+    box.classList.remove('pin-box-filled', 'pin-box-error');
+  });
+}
+
+function getPinValue() {
+  return pinBoxes.map(b => b.value).join('');
+}
+
+addProductBtn.addEventListener('click', openAddProductModal);
+document.getElementById('addProductClose').addEventListener('click', closeAddProductModal);
+document.getElementById('addProductCancel').addEventListener('click', closeAddProductModal);
+addProductOverlay.addEventListener('click', (e) => {
+  if (e.target === addProductOverlay) closeAddProductModal();
+});
+
+/* ---- Step 1 -> Step 2 ---- */
+addProductNext.addEventListener('click', () => {
+  const code = newProductCode.value.trim();
+  const name = newProductName.value.trim();
+  const unit = newProductUnit.value.trim();
+  const qtyRaw = newProductQty.value.trim();
+
+  if (!code || !name || !unit) {
+    addProductStep1Error.textContent = 'กรอกรหัสสินค้า ชื่อสินค้า และหน่วย ให้ครบก่อน';
+    addProductStep1Error.hidden = false;
+    return;
+  }
+  if (qtyRaw !== '' && (isNaN(parseInt(qtyRaw, 10)) || parseInt(qtyRaw, 10) < 0)) {
+    addProductStep1Error.textContent = 'จำนวนเริ่มต้นต้องเป็นตัวเลขไม่ติดลบ';
+    addProductStep1Error.hidden = false;
+    return;
+  }
+  if (ALL_PRODUCTS.some(p => p.code === code)) {
+    addProductStep1Error.textContent = `รหัสสินค้า "${code}" มีอยู่แล้วในระบบ`;
+    addProductStep1Error.hidden = false;
+    return;
+  }
+
+  addProductStep1Error.hidden = true;
+  addProductError.hidden = true;
+  addProductSuccess.hidden = true;
+  clearPinBoxes();
+  showAddProductStep(2);
+  setTimeout(() => pinBoxes[0].focus(), 50);
+});
+
+addProductBack.addEventListener('click', () => {
+  addProductError.hidden = true;
+  addProductSuccess.hidden = true;
+  showAddProductStep(1);
+  setTimeout(() => newProductCode.focus(), 50);
+});
+
+/* ---- Step 2: 6-box PIN entry ---- */
+pinBoxes.forEach((box, i) => {
+  box.addEventListener('input', () => {
+    box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+    box.classList.toggle('pin-box-filled', box.value !== '');
+    box.classList.remove('pin-box-error');
+    if (box.value && i < pinBoxes.length - 1) {
+      pinBoxes[i + 1].focus();
+    }
+    if (i === pinBoxes.length - 1 && getPinValue().length === pinBoxes.length) {
+      addProductConfirm.click();
+    }
+  });
+
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !box.value && i > 0) {
+      pinBoxes[i - 1].focus();
+    }
+  });
+
+  box.addEventListener('paste', (e) => {
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+    if (!text) return;
+    e.preventDefault();
+    text.split('').slice(0, pinBoxes.length).forEach((digit, idx) => {
+      pinBoxes[idx].value = digit;
+      pinBoxes[idx].classList.add('pin-box-filled');
+    });
+    const nextEmpty = pinBoxes.findIndex(b => !b.value);
+    (nextEmpty === -1 ? pinBoxes[pinBoxes.length - 1] : pinBoxes[nextEmpty]).focus();
+    if (getPinValue().length === pinBoxes.length) addProductConfirm.click();
+  });
+});
+
+addProductConfirm.addEventListener('click', () => {
+  if (!isEditor()) return;
+
+  addProductError.hidden = true;
+  addProductSuccess.hidden = true;
+
+  const code = newProductCode.value.trim();
+  const name = newProductName.value.trim();
+  const unit = newProductUnit.value.trim();
+  const qtyRaw = newProductQty.value.trim();
+  const qty = qtyRaw === '' ? 0 : parseInt(qtyRaw, 10);
+  const pin = getPinValue();
+
+  if (pin.length !== pinBoxes.length) {
+    addProductError.textContent = 'กรอก PIN ให้ครบ 6 หลัก';
+    addProductError.hidden = false;
+    return;
+  }
+  if (pin !== ADD_PRODUCT_PIN) {
+    addProductError.textContent = 'รหัสพิเศษไม่ถูกต้อง';
+    addProductError.hidden = false;
+    pinBoxes.forEach(b => b.classList.add('pin-box-error'));
+    clearPinBoxes();
+    pinBoxes[0].focus();
+    return;
+  }
+  if (ALL_PRODUCTS.some(p => p.code === code)) {
+    addProductError.textContent = `รหัสสินค้า "${code}" มีอยู่แล้วในระบบ`;
+    addProductError.hidden = false;
+    showAddProductStep(1);
+    return;
+  }
+
+  addProductConfirm.disabled = true;
+  addProductConfirm.textContent = 'กำลังบันทึก...';
+
+  fbAddProduct(code, name, unit, qty, currentUser ? currentUser.email : '')
+    .then(() => {
+      addProductSuccess.textContent = `เพิ่ม "${name}" เรียบร้อยแล้ว`;
+      addProductSuccess.hidden = false;
+      newProductCode.value = '';
+      newProductName.value = '';
+      newProductUnit.value = '';
+      newProductQty.value = '';
+      clearPinBoxes();
+      showAddProductStep(1);
+      setTimeout(() => newProductCode.focus(), 50);
+    })
+    .catch(err => {
+      console.error('เพิ่มสินค้าไม่สำเร็จ', err);
+      addProductError.textContent = (err && err.message === 'DUPLICATE_CODE')
+        ? `รหัสสินค้า "${code}" มีอยู่แล้วในระบบ`
+        : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      addProductError.hidden = false;
+    })
+    .finally(() => {
+      addProductConfirm.disabled = false;
+      addProductConfirm.textContent = 'บันทึกสินค้าใหม่';
+    });
+});

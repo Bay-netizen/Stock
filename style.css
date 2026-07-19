@@ -113,6 +113,16 @@ a:focus-visible,
   border-color: var(--kraft);
 }
 
+.add-product-btn {
+  color: var(--paper);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.add-product-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--paper);
+}
+
 .count-badge {
   font-family: var(--mono);
   font-size: 0.78rem;
@@ -644,6 +654,65 @@ mark {
   display: flex;
   gap: 8px;
   margin-bottom: 18px;
+}
+
+.pin-label {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 4px 0 2px;
+}
+
+.pin-sub {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 0 0 16px;
+}
+
+.pin-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pin-box {
+  width: 42px;
+  height: 52px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+  -webkit-text-security: disc;
+}
+
+.pin-box:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(203, 168, 106, 0.18);
+}
+
+.pin-box.pin-box-filled {
+  border-color: var(--ink);
+}
+
+.pin-box.pin-box-error {
+  border-color: var(--stamp-red);
+  animation: pinShake 0.3s ease;
+}
+
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
 .btn-secondary, .btn-primary {

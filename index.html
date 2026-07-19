@@ -37,6 +37,7 @@
         </div>
         <div class="topbar-actions">
           <span class="user-badge" id="userBadge"></span>
+          <button class="history-all-btn add-product-btn" id="addProductBtn" hidden>+ เพิ่มสินค้า</button>
           <button class="history-all-btn" id="historyAllBtn">ประวัติ</button>
           <button class="logout-btn" id="logoutBtn" aria-label="ออกจากระบบ">ออกจากระบบ</button>
           <div class="count-badge" id="resultCount">191 รายการ</div>
@@ -159,6 +160,57 @@
 
         <div class="cal-day-detail" id="calDayDetail">
           <p class="history-empty">แตะวันที่เพื่อดูรายการ</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add-product modal (admin only) -->
+    <div class="modal-overlay" id="addProductOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addProductTitle">
+        <div class="modal-head">
+          <h3 id="addProductTitle">เพิ่มสินค้าใหม่</h3>
+          <button class="modal-close" id="addProductClose" aria-label="ปิด">✕</button>
+        </div>
+
+        <!-- Step 1: product details -->
+        <div id="addProductStep1">
+          <div class="modal-input-row modal-input-col">
+            <input type="text" id="newProductCode" placeholder="รหัสสินค้า" autocomplete="off">
+            <input type="text" id="newProductName" placeholder="ชื่อสินค้า" autocomplete="off">
+          </div>
+          <div class="modal-input-row">
+            <input type="text" id="newProductUnit" placeholder="หน่วย เช่น อัน, ม้วน, ชุด" autocomplete="off">
+            <input type="number" id="newProductQty" min="0" step="1" placeholder="จำนวนเริ่มต้น" inputmode="numeric">
+          </div>
+
+          <p class="login-error" id="addProductStep1Error" hidden></p>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" id="addProductCancel">ยกเลิก</button>
+            <button class="btn-primary" id="addProductNext">ถัดไป</button>
+          </div>
+        </div>
+
+        <!-- Step 2: special PIN, entered as 6 individual digit boxes -->
+        <div id="addProductStep2" hidden>
+          <p class="pin-label">PIN</p>
+          <p class="pin-sub">ใส่รหัสพิเศษสำหรับเพิ่มสินค้า</p>
+          <div class="pin-boxes" id="pinBoxes">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="0">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="1">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="2">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="3">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="4">
+            <input type="password" class="pin-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-pin-index="5">
+          </div>
+
+          <p class="login-error" id="addProductError" hidden></p>
+          <p class="login-success" id="addProductSuccess" hidden></p>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" id="addProductBack">ย้อนกลับ</button>
+            <button class="btn-primary" id="addProductConfirm">บันทึกสินค้าใหม่</button>
+          </div>
         </div>
       </div>
     </div>

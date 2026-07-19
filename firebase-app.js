@@ -13,6 +13,7 @@ let fbInitError = null;
 
 const STOCK_COLLECTION = 'stock';
 const HISTORY_COLLECTION = 'history';
+const PRODUCTS_COLLECTION = 'products';
 const HISTORY_FETCH_LIMIT = 500;
 
 function configLooksUnset() {
@@ -124,6 +125,24 @@ function listenHistory(onData, onError) {
     }, onError);
 }
 
+// Products added by the admin after the app shipped (the original 191
+// items live in data.js and never touch Firestore). Keyed by product code.
+function listenProducts(onData, onError) {
+  return db.collection(PRODUCTS_COLLECTION).onSnapshot((snapshot) => {
+    const list = snapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        code: doc.id,
+        name: d.name,
+        unit: d.unit,
+        createdBy: d.createdBy || '',
+        createdAt: d.createdAt ? d.createdAt.toMillis() : Date.now()
+      };
+    });
+    onData(list);
+  }, onError);
+}
+
 /* ============================================
    Writes
    ============================================ */
@@ -161,5 +180,52 @@ function fbAdjustQty(code, delta, meta, seedQty) {
     });
 
     return after;
+  });
+}
+
+// Creates a brand-new product: a doc in `products` (name/unit/who-added-it),
+// a starting balance in `stock`, and — if the starting qty is above zero —
+// a history entry so the initial count shows up in the ledger too. Fails
+// if the code is already taken so we never silently overwrite an item.
+function fbAddProduct(code, name, unit, initialQty, userEmail) {
+  const productRef = db.collection(PRODUCTS_COLLECTION).doc(code);
+  const stockRef = db.collection(STOCK_COLLECTION).doc(code);
+  const historyRef = db.collection(HISTORY_COLLECTION).doc();
+
+  return db.runTransaction(async (tx) => {
+    const [productSnap, stockSnap] = await Promise.all([tx.get(productRef), tx.get(stockRef)]);
+    if (productSnap.exists || stockSnap.exists) {
+      throw new Error('DUPLICATE_CODE');
+    }
+
+    const qty = Math.max(0, Math.floor(Number(initialQty) || 0));
+
+    tx.set(productRef, {
+      name,
+      unit,
+      createdBy: userEmail || '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    tx.set(stockRef, {
+      qty,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    if (qty > 0) {
+      tx.set(historyRef, {
+        code,
+        name,
+        unit,
+        delta: qty,
+        mode: 'in',
+        after: qty,
+        note: 'เพิ่มสินค้าใหม่เข้าระบบ',
+        userEmail: userEmail || '',
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    return qty;
   });
 }
