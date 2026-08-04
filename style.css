@@ -134,6 +134,75 @@ a:focus-visible,
   white-space: nowrap;
 }
 
+.print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============================================
+   Page tabs (หน้า 1 / หน้า 2)
+   ============================================ */
+.page-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.page-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--paper-raised);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.page-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}
+
+.page-tab-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: all 0.12s ease;
+}
+
+.page-tab.active {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--paper-raised);
+  box-shadow: 3px 3px 0 var(--kraft-deep);
+}
+
+.page-tab.active .page-tab-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .page-tab { font-size: 0.82rem; padding: 9px 10px; }
+}
+
 /* ============================================
    Layout
    ============================================ */
@@ -1445,4 +1514,207 @@ mark {
 
 .cal-day-detail-list .history-entry:last-child {
   margin-bottom: 0;
+}
+/* ============================================
+   Print — ledger-styled stock report.
+
+   .print-area stays empty/hidden on screen; script.js fills it with a
+   freshly built report (respecting the active page/search/sort) right
+   before calling window.print(), and body.is-printing hides the live
+   app for the duration so only the report shows on paper.
+   ============================================ */
+.print-area {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  body.is-printing > *:not(.print-area) {
+    display: none !important;
+  }
+
+  body.is-printing .print-area {
+    display: block !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+.pr-sheet {
+  font-family: var(--sans);
+  color: var(--ink);
+  max-width: 100%;
+}
+
+.pr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.pr-brand {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.pr-mark {
+  font-family: var(--mono);
+  color: var(--kraft-deep);
+  margin-right: 6px;
+}
+
+.pr-meta {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.pr-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.pr-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.pr-page-chip {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: rgba(47, 111, 94, 0.1);
+  border: 1px solid var(--accent);
+  padding: 4px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.pr-table thead th {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.pr-table th.pr-no, .pr-table td.pr-no { width: 44px; text-align: center; font-family: var(--mono); }
+.pr-table th.pr-code, .pr-table td.pr-code { width: 90px; font-family: var(--mono); }
+.pr-table th.pr-unit, .pr-table td.pr-unit { width: 60px; text-align: center; }
+.pr-table th.pr-qty, .pr-table td.pr-qty { width: 90px; text-align: right; font-family: var(--mono); font-weight: 700; }
+
+.pr-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-strong);
+  vertical-align: top;
+}
+
+.pr-table tbody tr:nth-child(even) {
+  background: rgba(203, 168, 106, 0.08);
+}
+
+.pr-table tbody tr {
+  break-inside: avoid;
+}
+
+.pr-table thead {
+  display: table-header-group; /* repeat header on every printed page */
+}
+
+.pr-qty.pr-low { color: var(--stamp-red); }
+.pr-qty.pr-zero { color: var(--stamp-red); font-weight: 800; }
+
+.pr-empty {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 24px 0 !important;
+}
+
+.pr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-strong);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.pr-summary {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.pr-legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.pr-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.pr-dot-low, .pr-dot-zero { background: var(--stamp-red); }
+
+.pr-sign {
+  display: flex;
+  justify-content: flex-end;
+  gap: 60px;
+  margin-top: 60px;
+}
+
+.pr-sign-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pr-sign-line {
+  display: block;
+  width: 160px;
+  border-bottom: 1px solid var(--ink);
+  height: 30px;
+}
+
+.pr-sign-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
 }
