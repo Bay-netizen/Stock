@@ -3,32 +3,13 @@
    ============================================ */
 let currentQuery = '';
 let currentSort = { key: 'no', dir: 'asc' };
-let currentPage = 1;      // 1 or 2 — which stock sheet is showing
-let qtyMap = {};          // { stockKey: qty }  — populated from Firestore in realtime
-let history = [];         // [{ code, name, unit, delta, mode, note, after, ts, userEmail, refKey }]
-let dynamicProducts = []; // products added at runtime via the admin "add product" modal (always page 1)
-let ALL_PRODUCTS = [];    // PRODUCTS + PRODUCTS_PAGE2 + dynamicProducts, tagged with page/key/stockKey, rebuilt on change
-let activeAdjustKey = null;
+let qtyMap = {};          // { code: qty }  — populated from Firestore in realtime
+let history = [];         // [{ code, name, unit, delta, mode, note, after, ts, userEmail }]
+let dynamicProducts = []; // products added at runtime via the admin "add product" modal
+let ALL_PRODUCTS = PRODUCTS.slice(); // static list from data.js + dynamicProducts, rebuilt on change
+let activeAdjustCode = null;
 let adjustMode = 'in';
 let currentUser = null;
-
-// Page 2 items are tracked under their own Firestore keys (prefixed p2_) so
-// a product code that happens to appear on both sheets never shares a
-// quantity or history with its page-1 counterpart.
-function stockKeyFor(page, code) {
-  return page === 2 ? `p2_${code}` : code;
-}
-
-// Tags a raw data.js-style product with page/key/stockKey so the rest of
-// the app can treat page 1 and page 2 items as fully independent records.
-function tagProduct(p, page) {
-  return {
-    ...p,
-    page,
-    key: `${page}_${p.code}`,
-    stockKey: stockKeyFor(page, p.code)
-  };
-}
 
 // Only this account is allowed to adjust quantities. Everyone else gets a
 // read-only view — no +/- or "แก้ไข" buttons.
@@ -46,8 +27,6 @@ let unsubHistory = null;
 let unsubProducts = null;
 let stockLoaded = false;
 let historyLoaded = false;
-
-rebuildAllProducts(); // populate ALL_PRODUCTS immediately so the first render (pre-login) has data
 
 /* ============================================
    DOM refs
@@ -105,7 +84,6 @@ const addProductNext = document.getElementById('addProductNext');
 const addProductBack = document.getElementById('addProductBack');
 const addProductConfirm = document.getElementById('addProductConfirm');
 
-const pageTabs = document.getElementById('pageTabs');
 const printBtn = document.getElementById('printBtn');
 const printArea = document.getElementById('printArea');
 
@@ -151,10 +129,7 @@ function startListeners() {
     history = list;
     historyLoaded = true;
     updateSyncBanner();
-    if (!adjustOverlay.hidden && activeAdjustKey) {
-      const activeProduct = ALL_PRODUCTS.find(p => p.key === activeAdjustKey);
-      if (activeProduct) renderHistoryFor(activeProduct);
-    }
+    if (!adjustOverlay.hidden && activeAdjustCode) renderHistoryFor(activeAdjustCode);
     if (!allHistoryOverlay.hidden) { renderCalendar(); renderDayDetail(); }
   }, (err) => console.error('อ่านประวัติไม่สำเร็จ', err));
 
@@ -175,10 +150,9 @@ function stopListeners() {
   rebuildAllProducts();
 }
 
-// Merge the static catalog (data.js, both pages) with admin-added products
-// (which always land on page 1), numbering the added ones after the last
-// static "no" so they sort in at the end unless the person searches or
-// sorts by name/code/qty.
+// Merge the static catalog (data.js) with admin-added products, numbering
+// the added ones after the last static "no" so they sort in at the end
+// unless the person searches or sorts by name/code/qty.
 function rebuildAllProducts() {
   const maxNo = PRODUCTS.reduce((m, p) => Math.max(m, p.no), 0);
   const extra = dynamicProducts.map((p, i) => ({
@@ -188,9 +162,7 @@ function rebuildAllProducts() {
     unit: p.unit,
     qty: 0 // real qty always comes from qtyMap via getQty()
   }));
-  const page1 = PRODUCTS.concat(extra).map(p => tagProduct(p, 1));
-  const page2 = (typeof PRODUCTS_PAGE2 !== 'undefined' ? PRODUCTS_PAGE2 : []).map(p => tagProduct(p, 2));
-  ALL_PRODUCTS = page1.concat(page2);
+  ALL_PRODUCTS = PRODUCTS.concat(extra);
 }
 
 function updateSyncBanner() {
@@ -200,14 +172,12 @@ function updateSyncBanner() {
 /* ============================================
    Qty helpers
    ============================================ */
-// Takes a full product object (needs .stockKey to disambiguate page 1 vs
-// page 2 items that happen to share the same product code).
-function getQty(product) {
-  const stockKey = product.stockKey;
-  if (Object.prototype.hasOwnProperty.call(qtyMap, stockKey)) {
-    return qtyMap[stockKey];
+function getQty(code) {
+  if (Object.prototype.hasOwnProperty.call(qtyMap, code)) {
+    return qtyMap[code];
   }
-  return typeof product.qty === 'number' ? product.qty : 0;
+  const product = ALL_PRODUCTS.find(p => p.code === code);
+  return product ? product.qty : 0;
 }
 
 /* ============================================
@@ -306,12 +276,11 @@ function scoreProduct(p, query) {
    ============================================ */
 function getFilteredSorted() {
   let results;
-  const pageProducts = ALL_PRODUCTS.filter(p => p.page === currentPage);
 
   if (!currentQuery) {
-    results = pageProducts.map(p => ({ p, score: 0 }));
+    results = ALL_PRODUCTS.map(p => ({ p, score: 0 }));
   } else {
-    results = pageProducts
+    results = ALL_PRODUCTS
       .map(p => ({ p, score: scoreProduct(p, currentQuery) }))
       .filter(r => r.score !== null);
   }
@@ -321,8 +290,8 @@ function getFilteredSorted() {
       let ka = a.p[currentSort.key];
       let kb = b.p[currentSort.key];
       if (currentSort.key === 'qty') {
-        ka = getQty(a.p);
-        kb = getQty(b.p);
+        ka = getQty(a.p.code);
+        kb = getQty(b.p.code);
       }
       let cmp;
       if (typeof ka === 'number') {
@@ -359,7 +328,7 @@ function render() {
   emptyState.hidden = true;
 
   const rowsHtml = items.map(p => {
-    const qty = getQty(p);
+    const qty = getQty(p.code);
     const qtyClass = qty === 0 ? 'qty-zero' : (qty <= 5 ? 'qty-low' : '');
     return `
     <tr>
@@ -367,13 +336,13 @@ function render() {
       <td class="col-code">${highlight(p.code, currentQuery)}</td>
       <td class="col-name">${highlight(p.name, currentQuery)}</td>
       <td class="col-unit">${escapeHtml(p.unit)}</td>
-      <td class="col-qty ${qtyClass}" data-qty-cell="${p.key}">${qty}</td>
+      <td class="col-qty ${qtyClass}" data-qty-cell="${p.code}">${qty}</td>
       <td class="col-actions">
         ${isEditor() ? `
           <div class="qty-controls">
-            <button class="qty-btn qty-minus" data-action="dec" data-key="${p.key}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
-            <button class="qty-btn qty-plus" data-action="inc" data-key="${p.key}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
-            <button class="qty-detail-btn" data-action="detail" data-key="${p.key}">แก้ไข</button>
+            <button class="qty-btn qty-minus" data-action="dec" data-code="${p.code}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
+            <button class="qty-btn qty-plus" data-action="inc" data-code="${p.code}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
+            <button class="qty-detail-btn" data-action="detail" data-code="${p.code}">แก้ไข</button>
           </div>
         ` : ''}
       </td>
@@ -388,14 +357,13 @@ function render() {
    Quantity mutation core (writes to Firestore, transactional)
    ============================================ */
 async function applyDelta(product, delta, note) {
-  const after = await fbAdjustQty(product.stockKey, delta, {
+  const after = await fbAdjustQty(product.code, delta, {
     code: product.code,
     name: product.name,
     unit: product.unit,
     note: note || '',
-    userEmail: currentUser ? currentUser.email : '',
-    refKey: product.stockKey // ties this history entry to the right page/product unambiguously
-  }, getQty(product));
+    userEmail: currentUser ? currentUser.email : ''
+  }, getQty(product.code));
 
   return after;
 }
@@ -408,8 +376,8 @@ tableBody.addEventListener('click', (e) => {
   if (!btn) return;
   if (!isEditor()) return; // read-only account — buttons shouldn't even exist, but block just in case
 
-  const key = btn.dataset.key;
-  const product = ALL_PRODUCTS.find(p => p.key === key);
+  const code = btn.dataset.code;
+  const product = ALL_PRODUCTS.find(p => p.code === code);
   if (!product) return;
 
   const action = btn.dataset.action;
@@ -420,7 +388,7 @@ tableBody.addEventListener('click', (e) => {
       .catch(err => { console.error('บันทึกไม่สำเร็จ', err); alert('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'); })
       .finally(() => { btn.disabled = false; });
   } else if (action === 'dec') {
-    const before = getQty(product);
+    const before = getQty(product.code);
     if (before <= 0) return;
     btn.disabled = true;
     applyDelta(product, -1, '')
@@ -435,18 +403,18 @@ tableBody.addEventListener('click', (e) => {
    Adjust modal
    ============================================ */
 function openAdjustModal(product) {
-  activeAdjustKey = product.key;
+  activeAdjustCode = product.code;
   adjustMode = 'in';
   modeInBtn.classList.add('active');
   modeOutBtn.classList.remove('active');
 
   adjustProductName.textContent = `${product.name} (${product.code})`;
-  adjustCurrentQty.textContent = getQty(product);
+  adjustCurrentQty.textContent = getQty(product.code);
   adjustUnit.textContent = product.unit;
   adjustAmount.value = '';
   adjustNote.value = '';
 
-  renderHistoryFor(product);
+  renderHistoryFor(product.code);
 
   adjustOverlay.hidden = false;
   setTimeout(() => adjustAmount.focus(), 50);
@@ -454,7 +422,7 @@ function openAdjustModal(product) {
 
 function closeAdjustModal() {
   adjustOverlay.hidden = true;
-  activeAdjustKey = null;
+  activeAdjustCode = null;
 }
 
 document.getElementById('adjustClose').addEventListener('click', closeAdjustModal);
@@ -476,8 +444,8 @@ modeOutBtn.addEventListener('click', () => {
 });
 
 document.getElementById('adjustConfirm').addEventListener('click', () => {
-  if (!activeAdjustKey) return;
-  const product = ALL_PRODUCTS.find(p => p.key === activeAdjustKey);
+  if (!activeAdjustCode) return;
+  const product = ALL_PRODUCTS.find(p => p.code === activeAdjustCode);
   if (!product) return;
 
   const amountRaw = adjustAmount.value.trim();
@@ -515,14 +483,8 @@ document.getElementById('adjustConfirm').addEventListener('click', () => {
 /* ============================================
    History rendering (per-product, in adjust modal)
    ============================================ */
-function renderHistoryFor(product) {
-  // Entries written after this update carry refKey (= product.stockKey), so
-  // page 1 and page 2 items never mix history even if they share a code.
-  // Older entries (written before this field existed) fall back to
-  // matching on code, which is safe because they all predate page 2.
-  const entries = history
-    .filter(h => (h.refKey ? h.refKey === product.stockKey : h.code === product.stockKey))
-    .slice(0, 20);
+function renderHistoryFor(code) {
+  const entries = history.filter(h => h.code === code).slice(0, 20);
 
   if (entries.length === 0) {
     historyList.innerHTML = '<p class="history-empty">ยังไม่มีประวัติ</p>';
@@ -786,42 +748,19 @@ quickFilters.addEventListener('click', (e) => {
 });
 
 /* ============================================
-   Page tabs — switch between the two independent stock sheets
-   ============================================ */
-function setPage(page) {
-  if (page === currentPage) return;
-  currentPage = page;
-
-  pageTabs.querySelectorAll('.page-tab').forEach(btn => {
-    const isActive = Number(btn.dataset.page) === currentPage;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', String(isActive));
-  });
-
-  render();
-}
-
-pageTabs.addEventListener('click', (e) => {
-  const btn = e.target.closest('.page-tab');
-  if (!btn) return;
-  setPage(Number(btn.dataset.page));
-});
-
-/* ============================================
    Print — builds a clean, ledger-styled report of exactly what's
-   currently on screen (respects the active page, search, and sort)
-   and hands it to the browser's native print dialog.
+   currently on screen (respects search & sort) and hands it to the
+   browser's native print dialog (which can also "Save as PDF").
    ============================================ */
 function buildPrintHtml() {
   const items = getFilteredSorted();
-  const pageLabel = currentPage === 1 ? 'หน้า 1' : 'หน้า 2';
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'long', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-  const queryNote = currentQuery ? ` · ค้นหา "${escapeHtml(currentQuery)}"` : '';
+  const queryNote = currentQuery ? `ค้นหา "${escapeHtml(currentQuery)}"` : 'รายการทั้งหมด';
 
   const rowsHtml = items.map((p, i) => {
-    const qty = getQty(p);
+    const qty = getQty(p.code);
     const statusClass = qty === 0 ? 'pr-zero' : (qty <= 5 ? 'pr-low' : '');
     return `
       <tr>
@@ -844,7 +783,7 @@ function buildPrintHtml() {
 
       <div class="pr-titlebar">
         <h1 class="pr-title">รายงานสต๊อกสินค้า</h1>
-        <span class="pr-page-chip">${pageLabel}${queryNote}</span>
+        <span class="pr-page-chip">${queryNote}</span>
       </div>
 
       <table class="pr-table">
