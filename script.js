@@ -87,6 +87,12 @@ const addProductConfirm = document.getElementById('addProductConfirm');
 const printBtn = document.getElementById('printBtn');
 const printArea = document.getElementById('printArea');
 
+const calcFabBtn = document.getElementById('calcFabBtn');
+const calcPanel = document.getElementById('calcPanel');
+const calcCloseBtn = document.getElementById('calcCloseBtn');
+const calcExpressionEl = document.getElementById('calcExpression');
+const calcResultEl = document.getElementById('calcResult');
+
 /* ============================================
    Auth flow — this page requires a logged-in user.
    If nobody is logged in, bounce to login.html.
@@ -826,6 +832,172 @@ printBtn.addEventListener('click', openPrint);
 window.addEventListener('afterprint', () => {
   document.body.classList.remove('is-printing');
   printArea.innerHTML = '';
+});
+
+/* ============================================
+   Calculator — a small standalone pocket calculator (basic
+   left-to-right chaining like a physical calculator, not full
+   operator-precedence math). No eval() — everything below is
+   parsed and computed by hand.
+   ============================================ */
+let calcCurrent = '0';   // string as typed/displayed, e.g. "12.5" or "-3"
+let calcPrevious = null; // number, the left-hand operand once an operator is chosen
+let calcOperator = null; // '+' | '−' | '×' | '÷' | null
+let calcResetNext = false; // true right after choosing an operator or pressing "="
+
+function calcFormatNumber(numStr) {
+  if (numStr === 'Error') return numStr;
+  const neg = numStr.startsWith('-');
+  const unsigned = neg ? numStr.slice(1) : numStr;
+  const [intPart, decPart] = unsigned.split('.');
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (neg ? '-' : '') + withCommas + (decPart !== undefined ? '.' + decPart : '');
+}
+
+function calcRoundClean(n) {
+  // Avoids floating-point artifacts like 0.1 + 0.2 = 0.30000000000000004
+  return Math.round((n + Number.EPSILON) * 1e10) / 1e10;
+}
+
+function calcUpdateDisplay() {
+  calcResultEl.textContent = calcFormatNumber(calcCurrent);
+  calcExpressionEl.innerHTML = (calcPrevious !== null && calcOperator)
+    ? `${escapeHtml(calcFormatNumber(String(calcPrevious)))} ${escapeHtml(calcOperator)}`
+    : '&nbsp;';
+}
+
+function calcInputDigit(d) {
+  if (calcCurrent === 'Error' || calcResetNext) {
+    calcCurrent = '0';
+    calcResetNext = false;
+  }
+  if (calcCurrent.replace('-', '').replace('.', '').length >= 15) return; // sane display limit
+  calcCurrent = calcCurrent === '0' ? d : calcCurrent + d;
+  calcUpdateDisplay();
+}
+
+function calcInputDecimal() {
+  if (calcCurrent === 'Error' || calcResetNext) {
+    calcCurrent = '0';
+    calcResetNext = false;
+  }
+  if (!calcCurrent.includes('.')) calcCurrent += '.';
+  calcUpdateDisplay();
+}
+
+function calcClear() {
+  calcCurrent = '0';
+  calcPrevious = null;
+  calcOperator = null;
+  calcResetNext = false;
+  calcUpdateDisplay();
+}
+
+function calcBackspace() {
+  if (calcResetNext || calcCurrent === 'Error') return;
+  const stripped = calcCurrent.length > 1 ? calcCurrent.slice(0, -1) : '';
+  calcCurrent = (stripped === '' || stripped === '-') ? '0' : stripped;
+  calcUpdateDisplay();
+}
+
+function calcToggleSign() {
+  if (calcCurrent === '0' || calcCurrent === 'Error') return;
+  calcCurrent = calcCurrent.startsWith('-') ? calcCurrent.slice(1) : '-' + calcCurrent;
+  calcUpdateDisplay();
+}
+
+function calcPercent() {
+  if (calcCurrent === 'Error') return;
+  const val = parseFloat(calcCurrent);
+  calcCurrent = String(calcRoundClean(val / 100));
+  calcUpdateDisplay();
+}
+
+function calcCompute(a, b, op) {
+  switch (op) {
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b === 0 ? NaN : a / b;
+    default: return b;
+  }
+}
+
+function calcChooseOperator(op) {
+  if (calcCurrent === 'Error') return;
+  if (calcOperator !== null && !calcResetNext) {
+    calcEquals(); // chain: 5 + 3 + 2 = evaluates the running total each time
+  }
+  calcPrevious = parseFloat(calcCurrent);
+  calcOperator = op;
+  calcResetNext = true;
+  calcUpdateDisplay();
+}
+
+function calcEquals() {
+  if (calcOperator === null || calcPrevious === null) return;
+  const result = calcCompute(calcPrevious, parseFloat(calcCurrent), calcOperator);
+  calcCurrent = (!isFinite(result)) ? 'Error' : String(calcRoundClean(result));
+  calcPrevious = null;
+  calcOperator = null;
+  calcResetNext = true;
+  calcUpdateDisplay();
+}
+
+function openCalc() {
+  calcPanel.hidden = false;
+  calcFabBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeCalc() {
+  calcPanel.hidden = true;
+  calcFabBtn.setAttribute('aria-expanded', 'false');
+}
+
+calcFabBtn.addEventListener('click', () => {
+  if (calcPanel.hidden) openCalc(); else closeCalc();
+});
+calcCloseBtn.addEventListener('click', closeCalc);
+
+calcPanel.addEventListener('click', (e) => {
+  const numBtn = e.target.closest('[data-num]');
+  if (numBtn) { calcInputDigit(numBtn.dataset.num); return; }
+
+  const opBtn = e.target.closest('[data-op]');
+  if (opBtn) { calcChooseOperator(opBtn.dataset.op); return; }
+
+  const actionBtn = e.target.closest('[data-action]');
+  if (!actionBtn) return;
+  const actions = {
+    clear: calcClear,
+    backspace: calcBackspace,
+    percent: calcPercent,
+    sign: calcToggleSign,
+    decimal: calcInputDecimal,
+    equals: calcEquals
+  };
+  const fn = actions[actionBtn.dataset.action];
+  if (fn) fn();
+});
+
+// Keyboard support — only while the calculator is open, and only when the
+// person isn't typing into a text field (so it never hijacks the search
+// box or any modal input).
+document.addEventListener('keydown', (e) => {
+  if (calcPanel.hidden) return;
+  const activeTag = document.activeElement ? document.activeElement.tagName : '';
+  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+  if (e.key >= '0' && e.key <= '9') { calcInputDigit(e.key); e.preventDefault(); }
+  else if (e.key === '.') { calcInputDecimal(); e.preventDefault(); }
+  else if (e.key === '+') { calcChooseOperator('+'); e.preventDefault(); }
+  else if (e.key === '-') { calcChooseOperator('−'); e.preventDefault(); }
+  else if (e.key === '*') { calcChooseOperator('×'); e.preventDefault(); }
+  else if (e.key === '/') { calcChooseOperator('÷'); e.preventDefault(); }
+  else if (e.key === '%') { calcPercent(); e.preventDefault(); }
+  else if (e.key === 'Enter' || e.key === '=') { calcEquals(); e.preventDefault(); }
+  else if (e.key === 'Backspace') { calcBackspace(); e.preventDefault(); }
+  else if (e.key === 'Escape') { closeCalc(); }
 });
 
 /* ============================================

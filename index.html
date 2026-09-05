@@ -216,6 +216,52 @@
       </div>
     </div>
 
+    <!-- ============================================
+         Floating calculator — a quick pocket calculator for
+         everyday math while checking stock (totals, splits, etc).
+         Lives inside appRoot so it only shows once logged in.
+         ============================================ -->
+    <button class="calc-fab" id="calcFabBtn" aria-label="เปิดเครื่องคิดเลข" aria-expanded="false">🧮</button>
+
+    <div class="calc-panel" id="calcPanel" hidden role="dialog" aria-label="เครื่องคิดเลข">
+      <div class="calc-head">
+        <span class="calc-title">เครื่องคิดเลข</span>
+        <button class="calc-close" id="calcCloseBtn" aria-label="ปิดเครื่องคิดเลข">✕</button>
+      </div>
+
+      <div class="calc-display">
+        <div class="calc-expression" id="calcExpression">&nbsp;</div>
+        <div class="calc-result" id="calcResult">0</div>
+      </div>
+
+      <div class="calc-grid">
+        <button class="calc-btn calc-btn-fn" data-action="clear">C</button>
+        <button class="calc-btn calc-btn-fn" data-action="backspace" aria-label="ลบตัวสุดท้าย">⌫</button>
+        <button class="calc-btn calc-btn-fn" data-action="percent">%</button>
+        <button class="calc-btn calc-btn-op" data-op="÷">÷</button>
+
+        <button class="calc-btn" data-num="7">7</button>
+        <button class="calc-btn" data-num="8">8</button>
+        <button class="calc-btn" data-num="9">9</button>
+        <button class="calc-btn calc-btn-op" data-op="×">×</button>
+
+        <button class="calc-btn" data-num="4">4</button>
+        <button class="calc-btn" data-num="5">5</button>
+        <button class="calc-btn" data-num="6">6</button>
+        <button class="calc-btn calc-btn-op" data-op="−">−</button>
+
+        <button class="calc-btn" data-num="1">1</button>
+        <button class="calc-btn" data-num="2">2</button>
+        <button class="calc-btn" data-num="3">3</button>
+        <button class="calc-btn calc-btn-op" data-op="+">+</button>
+
+        <button class="calc-btn calc-btn-fn" data-action="sign">±</button>
+        <button class="calc-btn" data-num="0">0</button>
+        <button class="calc-btn" data-action="decimal">.</button>
+        <button class="calc-btn calc-btn-eq" data-action="equals">=</button>
+      </div>
+    </div>
+
   </div>
 
   <!-- ============================================
