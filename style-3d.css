@@ -1,0 +1,304 @@
+/* ============================================
+   style-3d.css — visual enhancement layer
+   Loaded AFTER style.css. Adds depth, dimension, and playful
+   micro-interactions on top of the existing kraft-ledger theme without
+   changing any HTML structure, class names, or app logic.
+   ============================================ */
+
+:root {
+  --shadow-color: 31, 36, 48;
+  --kraft-glow: rgba(203, 168, 106, 0.35);
+  --accent-glow: rgba(47, 111, 94, 0.35);
+}
+
+/* ---------- Global surface polish ---------- */
+html, body {
+  background-image:
+    radial-gradient(circle at 8% -10%, rgba(203, 168, 106, 0.10), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(47, 111, 94, 0.07), transparent 40%),
+    linear-gradient(var(--paper), var(--paper)),
+    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(203, 168, 106, 0.07) 28px);
+  background-attachment: fixed;
+}
+
+* {
+  transition: box-shadow 0.22s cubic-bezier(.2,.8,.2,1),
+              transform 0.18s cubic-bezier(.2,.8,.2,1),
+              background 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+}
+
+/* ---------- Topbar: glassy depth + shimmer brand mark ---------- */
+.topbar {
+  background: linear-gradient(180deg, #262c3a 0%, var(--ink) 60%, #171b24 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 6px 18px rgba(var(--shadow-color), 0.35),
+    0 1px 0 var(--kraft-deep);
+  backdrop-filter: saturate(1.1);
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, var(--kraft) 0%, #f0d9a8 45%, var(--kraft) 100%);
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brandSheen 6s ease-in-out infinite;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.35));
+}
+
+@keyframes brandSheen {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.history-all-btn,
+.add-product-btn,
+.count-badge,
+.logout-btn {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset;
+}
+
+.history-all-btn:hover,
+.add-product-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* ---------- Search box: lifted card with focus glow ---------- */
+.search-box {
+  box-shadow:
+    3px 3px 0 var(--kraft-deep),
+    0 10px 24px -12px rgba(var(--shadow-color), 0.35);
+}
+
+.search-box:focus-within {
+  box-shadow:
+    4px 4px 0 var(--accent-deep),
+    0 0 0 4px var(--accent-glow),
+    0 14px 30px -14px rgba(31, 79, 66, 0.45);
+  transform: translate(-2px, -2px);
+}
+
+.chip {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px -6px rgba(47, 111, 94, 0.35);
+}
+
+.chip.active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: 0 4px 12px -4px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.15) inset;
+  transform: translateY(-1px);
+}
+
+/* ---------- Table: raised panel, floaty rows, glossy header ---------- */
+.table-section {
+  box-shadow:
+    3px 3px 0 var(--kraft-deep),
+    0 20px 40px -22px rgba(var(--shadow-color), 0.45);
+}
+
+thead {
+  background: linear-gradient(180deg, #2a3040 0%, var(--ink) 100%);
+}
+
+th.sortable:hover { background: #333a4a; }
+
+tbody tr {
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+tbody tr:hover {
+  transform: translateY(-1px) scale(1.002);
+  box-shadow: 0 6px 14px -10px rgba(var(--shadow-color), 0.4);
+  position: relative;
+  z-index: 1;
+}
+
+.col-qty {
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+
+/* Card layout on narrow screens gets a bit of lift + tap feedback */
+@media (max-width: 700px) {
+  tbody tr {
+    box-shadow: 2px 2px 0 rgba(156, 122, 63, 0.15), 0 8px 18px -14px rgba(var(--shadow-color), 0.35);
+  }
+  tbody tr:active {
+    transform: scale(0.99);
+  }
+}
+
+/* ---------- Buttons: pressable 3D feel ---------- */
+.qty-btn, .photo-btn, .delete-product-btn, .qty-detail-btn {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.6) inset;
+}
+
+.qty-btn:hover, .photo-btn:hover, .delete-product-btn:hover, .qty-detail-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px -2px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.6) inset;
+}
+
+.qty-btn:active, .photo-btn:active, .delete-product-btn:active, .calc-btn:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.15) inset;
+}
+
+.btn-primary, .btn-secondary {
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25), 0 4px 10px -4px rgba(var(--shadow-color), 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #2b3140 0%, var(--ink) 100%);
+}
+
+.btn-primary:hover, .btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 8px 16px -6px rgba(var(--shadow-color), 0.35);
+}
+
+.btn-primary:active, .btn-secondary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+/* ---------- Modals: pop-in with soft elevation ---------- */
+.modal-overlay {
+  backdrop-filter: blur(3px);
+  background: rgba(17, 20, 27, 0.6);
+}
+
+.modal {
+  box-shadow:
+    4px 4px 0 var(--kraft-deep),
+    0 30px 60px -20px rgba(var(--shadow-color), 0.55);
+  animation: modalPop 0.22s cubic-bezier(.2,.9,.3,1.2);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal { animation: none; }
+}
+
+.toggle-btn.active[data-mode="in"] {
+  box-shadow: 0 4px 12px -4px var(--accent-glow);
+}
+
+.toggle-btn.active[data-mode="out"] {
+  box-shadow: 0 4px 12px -4px rgba(181, 72, 47, 0.4);
+}
+
+.pin-box:focus {
+  box-shadow: 0 0 0 4px rgba(203, 168, 106, 0.25), 0 2px 6px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* ---------- Auth pages: ambient depth ---------- */
+.auth-panel-brand {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(203, 168, 106, 0.12), transparent 45%),
+    linear-gradient(160deg, #262c3a 0%, var(--ink) 55%, #14171f 100%);
+}
+
+.login-screen {
+  background:
+    radial-gradient(circle at 30% 10%, rgba(203, 168, 106, 0.10), transparent 45%),
+    var(--ink);
+}
+
+.login-card, .auth-card.login-card {
+  box-shadow:
+    4px 4px 0 var(--kraft-deep),
+    0 30px 60px -20px rgba(0, 0, 0, 0.5);
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
+}
+
+.ledger-preview {
+  box-shadow: 0 10px 30px -14px rgba(0,0,0,0.5) inset;
+}
+
+.status-dot {
+  box-shadow: 0 0 0 0 rgba(107, 191, 154, 0.5), 0 0 8px 1px rgba(107, 191, 154, 0.6);
+}
+
+.login-submit, .login-form .btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------- Calculator FAB: floaty, tactile ---------- */
+.calc-fab {
+  background: linear-gradient(150deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow:
+    3px 3px 0 var(--kraft-deep),
+    0 10px 24px -8px var(--accent-glow);
+  animation: fabFloat 3.4s ease-in-out infinite;
+}
+
+@keyframes fabFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.calc-fab:hover {
+  animation-play-state: paused;
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 4px 5px 0 var(--kraft-deep), 0 14px 30px -8px var(--accent-glow);
+}
+
+.calc-fab:active {
+  animation-play-state: paused;
+  transform: translate(2px, 2px) scale(0.97);
+  box-shadow: 1px 1px 0 var(--kraft-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calc-fab { animation: none; }
+}
+
+.calc-panel {
+  box-shadow: 5px 5px 0 var(--kraft-deep), 0 24px 50px -18px rgba(var(--shadow-color), 0.5);
+  animation: modalPop 0.18s cubic-bezier(.2,.9,.3,1.2);
+}
+
+.calc-btn:hover { transform: translateY(-1px); }
+.calc-btn-eq {
+  background: linear-gradient(160deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: 0 2px 8px -2px var(--accent-glow);
+}
+
+/* ---------- Low-stock emphasis: subtle pulse to draw the eye ---------- */
+.col-qty.qty-zero {
+  animation: qtyZeroPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes qtyZeroPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col-qty.qty-zero { animation: none; }
+}
+
+/* ---------- Scrollbar polish ---------- */
+.table-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--line-strong), var(--kraft-deep));
+  border-radius: 5px;
+}
+
+/* ---------- Reduced motion: keep hover lifts but drop looping animation ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark { animation: none; }
+}
