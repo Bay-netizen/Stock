@@ -14,6 +14,7 @@ let fbInitError = null;
 const STOCK_COLLECTION = 'stock';
 const HISTORY_COLLECTION = 'history';
 const PRODUCTS_COLLECTION = 'products';
+const PHOTOS_COLLECTION = 'photos';
 const HISTORY_FETCH_LIMIT = 500;
 
 function configLooksUnset() {
@@ -228,4 +229,49 @@ function fbAddProduct(code, name, unit, initialQty, userEmail) {
 
     return qty;
   });
+}
+
+// Deletes an admin-added product entirely: its `products` doc, its `stock`
+// doc (current quantity), and any saved location `photos` doc. History
+// entries are left alone on purpose — they're an audit trail of what
+// happened while the item existed, not tied to whether it still exists.
+// Only ever call this for a product that lives in the `products`
+// collection (i.e. one added via fbAddProduct) — static catalog items
+// from data.js were never written there, so deleting their `stock` doc
+// would wipe a real quantity for no reason.
+function fbDeleteProduct(code) {
+  const batch = db.batch();
+  batch.delete(db.collection(PRODUCTS_COLLECTION).doc(code));
+  batch.delete(db.collection(STOCK_COLLECTION).doc(code));
+  batch.delete(db.collection(PHOTOS_COLLECTION).doc(code));
+  return batch.commit();
+}
+
+/* ============================================
+   Location photos — one photo per product code, showing where the
+   item physically lives (shelf, box, bin...). Stored as a compressed
+   base64 data URL directly in Firestore (script.js keeps it well under
+   the 1MB-per-document limit before ever calling fbSavePhoto), so no
+   separate Firebase Storage bucket needs to be set up.
+   ============================================ */
+function listenPhotos(onData, onError) {
+  return db.collection(PHOTOS_COLLECTION).onSnapshot((snapshot) => {
+    const map = {};
+    snapshot.forEach(doc => {
+      map[doc.id] = doc.data().dataUrl || null;
+    });
+    onData(map);
+  }, onError);
+}
+
+function fbSavePhoto(code, dataUrl, userEmail) {
+  return db.collection(PHOTOS_COLLECTION).doc(code).set({
+    dataUrl,
+    updatedBy: userEmail || '',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function fbDeletePhoto(code) {
+  return db.collection(PHOTOS_COLLECTION).doc(code).delete();
 }

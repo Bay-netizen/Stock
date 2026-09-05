@@ -216,6 +216,32 @@
       </div>
     </div>
 
+    <!-- Location-photo modal — shows/adds a photo of where a product is
+         kept. Anyone can view; only the editor account can add/replace/
+         remove (see photoEditorActions.hidden in script.js). -->
+    <div class="modal-overlay" id="photoOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="photoTitle">
+        <div class="modal-head">
+          <h3 id="photoTitle">ตำแหน่งสินค้า</h3>
+          <button class="modal-close" id="photoClose" aria-label="ปิด">✕</button>
+        </div>
+        <p class="modal-product" id="photoProductName"></p>
+
+        <div class="photo-frame" id="photoFrame">
+          <img id="photoImg" alt="รูปตำแหน่งสินค้า" hidden>
+          <p class="photo-empty" id="photoEmpty">ยังไม่มีรูปตำแหน่งสินค้า</p>
+        </div>
+
+        <p class="login-error" id="photoStatus" hidden></p>
+
+        <div class="modal-actions photo-actions" id="photoEditorActions" hidden>
+          <button class="btn-secondary" id="photoRemoveBtn" hidden>ลบรูป</button>
+          <button class="btn-primary" id="photoUploadBtn">📷 ถ่าย/เลือกรูป</button>
+        </div>
+        <input type="file" accept="image/*" capture="environment" id="photoFileInput" hidden>
+      </div>
+    </div>
+
     <!-- ============================================
          Floating calculator — a quick pocket calculator for
          everyday math while checking stock (totals, splits, etc).

@@ -6,8 +6,10 @@ let currentSort = { key: 'no', dir: 'asc' };
 let qtyMap = {};          // { code: qty }  — populated from Firestore in realtime
 let history = [];         // [{ code, name, unit, delta, mode, note, after, ts, userEmail }]
 let dynamicProducts = []; // products added at runtime via the admin "add product" modal
+let photoMap = {};        // { code: dataUrl }  — location photos, populated from Firestore in realtime
 let ALL_PRODUCTS = PRODUCTS.slice(); // static list from data.js + dynamicProducts, rebuilt on change
 let activeAdjustCode = null;
+let activePhotoCode = null;
 let adjustMode = 'in';
 let currentUser = null;
 
@@ -25,6 +27,7 @@ const ADD_PRODUCT_PIN = '112233';
 let unsubStock = null;
 let unsubHistory = null;
 let unsubProducts = null;
+let unsubPhotos = null;
 let stockLoaded = false;
 let historyLoaded = false;
 
@@ -93,6 +96,17 @@ const calcCloseBtn = document.getElementById('calcCloseBtn');
 const calcExpressionEl = document.getElementById('calcExpression');
 const calcResultEl = document.getElementById('calcResult');
 
+const photoOverlay = document.getElementById('photoOverlay');
+const photoProductName = document.getElementById('photoProductName');
+const photoImg = document.getElementById('photoImg');
+const photoEmpty = document.getElementById('photoEmpty');
+const photoStatus = document.getElementById('photoStatus');
+const photoEditorActions = document.getElementById('photoEditorActions');
+const photoRemoveBtn = document.getElementById('photoRemoveBtn');
+const photoUploadBtn = document.getElementById('photoUploadBtn');
+const photoFileInput = document.getElementById('photoFileInput');
+const photoClose = document.getElementById('photoClose');
+
 /* ============================================
    Auth flow — this page requires a logged-in user.
    If nobody is logged in, bounce to login.html.
@@ -144,21 +158,31 @@ function startListeners() {
     rebuildAllProducts();
     render();
   }, (err) => console.error('อ่านรายการสินค้าที่เพิ่มไม่สำเร็จ', err));
+
+  unsubPhotos = listenPhotos((map) => {
+    photoMap = map;
+    render();
+    if (!photoOverlay.hidden && activePhotoCode) renderPhotoModalContent();
+  }, (err) => console.error('อ่านรูปตำแหน่งสินค้าไม่สำเร็จ', err));
 }
 
 function stopListeners() {
   if (unsubStock) { unsubStock(); unsubStock = null; }
   if (unsubHistory) { unsubHistory(); unsubHistory = null; }
   if (unsubProducts) { unsubProducts(); unsubProducts = null; }
+  if (unsubPhotos) { unsubPhotos(); unsubPhotos = null; }
   qtyMap = {};
   history = [];
   dynamicProducts = [];
+  photoMap = {};
   rebuildAllProducts();
 }
 
 // Merge the static catalog (data.js) with admin-added products, numbering
 // the added ones after the last static "no" so they sort in at the end
-// unless the person searches or sorts by name/code/qty.
+// unless the person searches or sorts by name/code/qty. Each item is
+// tagged isDynamic so the UI knows which ones are safe to offer a
+// "delete" button for — static catalog items never get one.
 function rebuildAllProducts() {
   const maxNo = PRODUCTS.reduce((m, p) => Math.max(m, p.no), 0);
   const extra = dynamicProducts.map((p, i) => ({
@@ -166,9 +190,11 @@ function rebuildAllProducts() {
     code: p.code,
     name: p.name,
     unit: p.unit,
-    qty: 0 // real qty always comes from qtyMap via getQty()
+    qty: 0, // real qty always comes from qtyMap via getQty()
+    isDynamic: true
   }));
-  ALL_PRODUCTS = PRODUCTS.concat(extra);
+  const staticItems = PRODUCTS.map(p => ({ ...p, isDynamic: false }));
+  ALL_PRODUCTS = staticItems.concat(extra);
 }
 
 function updateSyncBanner() {
@@ -336,21 +362,27 @@ function render() {
   const rowsHtml = items.map(p => {
     const qty = getQty(p.code);
     const qtyClass = qty === 0 ? 'qty-zero' : (qty <= 5 ? 'qty-low' : '');
+    const hasPhoto = !!photoMap[p.code];
+    const canDelete = p.isDynamic && isEditor();
     return `
     <tr>
-      <td class="col-no">${p.no}</td>
-      <td class="col-code">${highlight(p.code, currentQuery)}</td>
-      <td class="col-name">${highlight(p.name, currentQuery)}</td>
-      <td class="col-unit">${escapeHtml(p.unit)}</td>
-      <td class="col-qty ${qtyClass}" data-qty-cell="${p.code}">${qty}</td>
-      <td class="col-actions">
-        ${isEditor() ? `
-          <div class="qty-controls">
-            <button class="qty-btn qty-minus" data-action="dec" data-code="${p.code}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
-            <button class="qty-btn qty-plus" data-action="inc" data-code="${p.code}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
-            <button class="qty-detail-btn" data-action="detail" data-code="${p.code}">แก้ไข</button>
-          </div>
-        ` : ''}
+      <td class="col-no" data-label="ลำดับ">${p.no}</td>
+      <td class="col-code" data-label="รหัส">${highlight(p.code, currentQuery)}</td>
+      <td class="col-name" data-label="รายการ">${highlight(p.name, currentQuery)}</td>
+      <td class="col-unit" data-label="หน่วย">${escapeHtml(p.unit)}</td>
+      <td class="col-qty ${qtyClass}" data-qty-cell="${p.code}" data-label="จำนวน">${qty}</td>
+      <td class="col-actions" data-label="จัดการ">
+        <div class="row-actions">
+          ${isEditor() ? `
+            <div class="qty-controls">
+              <button class="qty-btn qty-minus" data-action="dec" data-code="${p.code}" aria-label="ลด 1 ${escapeHtml(p.name)}">−</button>
+              <button class="qty-btn qty-plus" data-action="inc" data-code="${p.code}" aria-label="เพิ่ม 1 ${escapeHtml(p.name)}">+</button>
+              <button class="qty-detail-btn" data-action="detail" data-code="${p.code}">แก้ไข</button>
+            </div>
+          ` : ''}
+          <button class="photo-btn ${hasPhoto ? 'has-photo' : ''}" data-action="photo" data-code="${p.code}" aria-label="ดูตำแหน่งสินค้า ${escapeHtml(p.name)}" title="ตำแหน่งสินค้า">📷</button>
+          ${canDelete ? `<button class="delete-product-btn" data-action="delete" data-code="${p.code}" aria-label="ลบสินค้า ${escapeHtml(p.name)}" title="ลบสินค้านี้">🗑</button>` : ''}
+        </div>
       </td>
     </tr>
   `;
@@ -380,13 +412,19 @@ async function applyDelta(product, delta, note) {
 tableBody.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
-  if (!isEditor()) return; // read-only account — buttons shouldn't even exist, but block just in case
 
   const code = btn.dataset.code;
   const product = ALL_PRODUCTS.find(p => p.code === code);
   if (!product) return;
 
   const action = btn.dataset.action;
+
+  if (action === 'photo') {
+    openPhotoModal(product);
+    return;
+  }
+
+  if (!isEditor()) return; // read-only account — remaining buttons shouldn't even exist, but block just in case
 
   if (action === 'inc') {
     btn.disabled = true;
@@ -402,6 +440,17 @@ tableBody.addEventListener('click', (e) => {
       .finally(() => { btn.disabled = false; });
   } else if (action === 'detail') {
     openAdjustModal(product);
+  } else if (action === 'delete') {
+    if (!product.isDynamic) return; // safety: never delete a static catalog item
+    const ok = confirm(
+      `ลบสินค้า "${product.name}" (${product.code}) ออกจากระบบ?\n\n` +
+      `จำนวนคงเหลือและรูปตำแหน่งของรายการนี้จะถูกลบไปด้วย (ประวัติเข้า-ออกเดิมจะยังเก็บไว้)\n` +
+      `การลบนี้ย้อนกลับไม่ได้`
+    );
+    if (!ok) return;
+    btn.disabled = true;
+    fbDeleteProduct(product.code)
+      .catch(err => { console.error('ลบสินค้าไม่สำเร็จ', err); alert('ลบสินค้าไม่สำเร็จ ลองใหม่อีกครั้ง'); btn.disabled = false; });
   }
 });
 
@@ -516,6 +565,138 @@ function entryHtml(h) {
     </div>
   `;
 }
+
+/* ============================================
+   Location photos — one photo per product code, so anyone can look up
+   where an item physically lives. Viewing is open to everyone; adding,
+   replacing, or removing the photo is limited to the editor account
+   (photoEditorActions is hidden otherwise), same as quantity changes.
+   ============================================ */
+function openPhotoModal(product) {
+  activePhotoCode = product.code;
+  photoProductName.textContent = `${product.name} (${product.code})`;
+  photoStatus.hidden = true;
+  renderPhotoModalContent();
+  photoOverlay.hidden = false;
+}
+
+function closePhotoModal() {
+  photoOverlay.hidden = true;
+  activePhotoCode = null;
+}
+
+function renderPhotoModalContent() {
+  const dataUrl = activePhotoCode ? photoMap[activePhotoCode] : null;
+
+  if (dataUrl) {
+    photoImg.src = dataUrl;
+    photoImg.hidden = false;
+    photoEmpty.hidden = true;
+  } else {
+    photoImg.hidden = true;
+    photoImg.src = '';
+    photoEmpty.hidden = false;
+  }
+
+  photoEditorActions.hidden = !isEditor();
+  photoRemoveBtn.hidden = !dataUrl;
+}
+
+photoClose.addEventListener('click', closePhotoModal);
+photoOverlay.addEventListener('click', (e) => {
+  if (e.target === photoOverlay) closePhotoModal();
+});
+
+// Shrinks and re-compresses a photo client-side before it ever reaches
+// Firestore, since photos are stored as a data URL field on a document
+// (no separate Storage bucket to configure) and documents cap at 1MB.
+function resizeImageFile(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('เปิดไฟล์รูปไม่สำเร็จ'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImageForStorage(file) {
+  if (!file.type || !file.type.startsWith('image/')) {
+    throw new Error('เลือกไฟล์รูปภาพเท่านั้น');
+  }
+  // Try progressively smaller/lower-quality passes until comfortably
+  // under Firestore's 1MB document cap (~700KB of base64 text leaves
+  // plenty of headroom for the other small fields on the doc).
+  const attempts = [
+    { maxDim: 1000, quality: 0.7 },
+    { maxDim: 800, quality: 0.6 },
+    { maxDim: 640, quality: 0.5 },
+    { maxDim: 480, quality: 0.4 }
+  ];
+  let lastDataUrl = null;
+  for (const a of attempts) {
+    lastDataUrl = await resizeImageFile(file, a.maxDim, a.quality);
+    if (lastDataUrl.length < 700000) return lastDataUrl;
+  }
+  return lastDataUrl; // smallest attempt we managed — still safely under the 1MB cap in practice
+}
+
+photoUploadBtn.addEventListener('click', () => {
+  if (!isEditor()) return;
+  photoFileInput.click();
+});
+
+photoFileInput.addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // reset so choosing the same file again still fires "change"
+  if (!file || !activePhotoCode || !isEditor()) return;
+
+  const code = activePhotoCode;
+  photoStatus.hidden = false;
+  photoStatus.textContent = 'กำลังบันทึกรูป...';
+  photoUploadBtn.disabled = true;
+
+  try {
+    const dataUrl = await compressImageForStorage(file);
+    await fbSavePhoto(code, dataUrl, currentUser ? currentUser.email : '');
+    photoStatus.hidden = true;
+  } catch (err) {
+    console.error('บันทึกรูปไม่สำเร็จ', err);
+    photoStatus.textContent = (err && err.message) ? err.message : 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง';
+  } finally {
+    photoUploadBtn.disabled = false;
+  }
+});
+
+photoRemoveBtn.addEventListener('click', async () => {
+  if (!isEditor() || !activePhotoCode) return;
+  if (!confirm('ลบรูปตำแหน่งสินค้านี้?')) return;
+
+  photoRemoveBtn.disabled = true;
+  try {
+    await fbDeletePhoto(activePhotoCode);
+  } catch (err) {
+    console.error('ลบรูปไม่สำเร็จ', err);
+    alert('ลบรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+  } finally {
+    photoRemoveBtn.disabled = false;
+  }
+});
 
 /* ============================================
    All-history modal — compact monthly calendar.
@@ -1008,6 +1189,7 @@ document.addEventListener('keydown', (e) => {
     if (!adjustOverlay.hidden) closeAdjustModal();
     if (!allHistoryOverlay.hidden) allHistoryOverlay.hidden = true;
     if (!addProductOverlay.hidden) closeAddProductModal();
+    if (!photoOverlay.hidden) closePhotoModal();
   }
 });
 

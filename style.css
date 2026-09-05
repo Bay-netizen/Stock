@@ -369,8 +369,14 @@ td {
 .col-qty.qty-zero { color: var(--stamp-red); }
 
 .col-actions {
-  width: 132px;
-  white-space: nowrap;
+  width: 168px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .qty-controls {
@@ -425,6 +431,51 @@ td {
 .qty-detail-btn:hover {
   border-color: var(--accent);
   color: var(--accent-deep);
+}
+
+.photo-btn,
+.delete-product-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line-strong);
+  background: var(--paper-raised);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  line-height: 1;
+  padding: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.photo-btn:hover {
+  border-color: var(--kraft-deep);
+  background: rgba(203, 168, 106, 0.14);
+}
+
+.photo-btn.has-photo::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--paper-raised);
+}
+
+.delete-product-btn {
+  color: var(--stamp-red);
+  border-color: rgba(181, 72, 47, 0.35);
+}
+
+.delete-product-btn:hover {
+  border-color: var(--stamp-red);
+  background: #fbeeec;
 }
 
 mark {
@@ -492,7 +543,29 @@ mark {
    Responsive
    ============================================ */
 @media (max-width: 640px) {
-  .topbar-inner { padding: 12px 14px; }
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .history-all-btn {
+    font-size: 0.72rem;
+    padding: 5px 9px;
+  }
+  .logout-btn {
+    font-size: 0.72rem;
+    padding: 5px 9px;
+  }
+  .count-badge {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+  }
   .brand-text { font-size: 1rem; }
   .wrap { padding: 16px 12px 30px; }
   #searchInput { font-size: 0.95rem; padding: 12px 8px; }
@@ -501,6 +574,101 @@ mark {
   .col-name { min-width: 160px; }
   .quick-filters { gap: 6px; }
   .chip { font-size: 0.76rem; padding: 5px 11px; }
+}
+
+/* ============================================
+   Card layout for the product table on narrow screens — avoids the
+   sideways-scrolling table entirely below this width. Relies on the
+   data-label attribute script.js puts on every <td>.
+   ============================================ */
+@media (max-width: 700px) {
+  .quick-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    margin-top: 10px;
+  }
+  .quick-filters::-webkit-scrollbar { height: 5px; }
+  .chip { flex-shrink: 0; }
+
+  .table-scroll { overflow-x: hidden; padding: 2px 0; }
+
+  thead { display: none; }
+
+  table, tbody, tr, td { display: block; width: 100%; }
+
+  tbody tr {
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    margin: 10px;
+    padding: 2px 12px;
+    box-shadow: 2px 2px 0 rgba(156, 122, 63, 0.15);
+  }
+
+  tbody tr:nth-child(even) { background: var(--paper-raised); }
+  tbody tr:hover, tbody tr:nth-child(even):hover { background: var(--paper-raised); }
+
+  td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--line);
+    width: auto;
+    min-width: 0;
+  }
+
+  td:last-child { border-bottom: none; }
+
+  td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  .col-name {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .col-name::before { margin-bottom: 1px; }
+
+  .col-qty { font-size: 1.05rem; }
+
+  .col-actions {
+    width: auto;
+    padding: 10px 0 4px;
+  }
+
+  .col-actions::before { display: none; }
+
+  .row-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .qty-btn, .photo-btn, .delete-product-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .qty-detail-btn {
+    padding: 7px 10px;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .pin-box { width: 36px; height: 46px; font-size: 1.2rem; }
+  .pin-boxes { gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -750,6 +918,46 @@ mark {
   padding-top: 14px;
 }
 
+/* ============================================
+   Location-photo modal
+   ============================================ */
+.photo-frame {
+  background: var(--paper);
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.photo-frame img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: var(--paper);
+}
+
+.photo-empty {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  padding: 24px;
+  text-align: center;
+  margin: 0;
+}
+
+.photo-actions {
+  justify-content: space-between;
+}
+
+.photo-actions .btn-primary {
+  flex: 1;
+}
+
+
 .modal-history h4 {
   margin: 0 0 10px;
   font-size: 0.82rem;
@@ -838,11 +1046,6 @@ mark {
 .history-entry-after {
   font-size: 0.72rem;
   color: var(--ink-soft);
-}
-
-@media (max-width: 640px) {
-  .col-actions { width: 118px; }
-  .qty-btn { width: 24px; height: 24px; }
 }
 
 /* ============================================
