@@ -1,0 +1,274 @@
+/* ============================================
+   theme-office.css — "office supply stock room" re-theme
+   Loaded LAST. Swaps the warm kraft-paper ledger palette for a cleaner
+   corporate office-supply look (steel blue + slate + white), replaces
+   the brand mark with a proper logo badge, and changes the page
+   background entirely. Builds on top of style.css / style-3d.css by
+   redefining their CSS custom properties + a handful of literal-color
+   spots the base sheet didn't tokenize.
+   ============================================ */
+
+:root {
+  /* --- core palette: slate ink on cool office-gray, steel-blue brand --- */
+  --ink: #1e2938;
+  --ink-soft: #5b6b7d;
+  --paper: #eef1f5;              /* new background color */
+  --paper-raised: #ffffff;
+  --line: #dde3ea;
+  --line-strong: #c2ccd8;
+
+  /* brand / primary (was warm "kraft" gold-brown -> steel blue) */
+  --kraft: #2f6fed;
+  --kraft-deep: #1c4fc0;
+  --kraft-tint: rgba(47, 111, 237, 0.12);
+
+  /* secondary / stock-in accent (was forest green -> teal-blue, still reads "in stock") */
+  --accent: #0e7c86;
+  --accent-deep: #0a5b62;
+
+  /* stock-out / low-stock warning stays a clear amber-red for legibility */
+  --stamp-red: #d64545;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+}
+
+/* ---------- Background: office supply-room, not ledger paper ---------- */
+html, body {
+  background: var(--paper);
+  background-image: none;
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 10% 0%, rgba(47, 111, 237, 0.08), transparent 40%),
+    radial-gradient(circle at 100% 10%, rgba(14, 124, 134, 0.06), transparent 42%),
+    linear-gradient(180deg, #f4f6f9 0%, #eef1f5 260px, #eef1f5 100%),
+    linear-gradient(90deg, rgba(30, 41, 56, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(30, 41, 56, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, auto, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
+/* Kill the ruled-ledger-line texture wherever style.css hardcoded it */
+.login-screen,
+.auth-panel-brand,
+.auth-panel-form {
+  background-image: none !important;
+}
+
+.login-screen {
+  background: radial-gradient(circle at 25% 10%, rgba(47, 111, 237, 0.16), transparent 45%), var(--ink);
+}
+
+.auth-panel-brand {
+  background: radial-gradient(circle at 20% 15%, rgba(47, 111, 237, 0.18), transparent 45%),
+              linear-gradient(160deg, #24314a 0%, var(--ink) 55%, #131c28 100%) !important;
+}
+
+.auth-panel-form {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(14, 124, 134, 0.05), transparent 40%),
+    linear-gradient(90deg, rgba(30, 41, 56, 0.03) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(30, 41, 56, 0.03) 1px, transparent 1px),
+    var(--paper) !important;
+  background-size: auto, 28px 28px, 28px 28px, auto !important;
+}
+
+/* ---------- Logo badge (replaces the old "#" glyph) ---------- */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: linear-gradient(150deg, #4c86ff 0%, var(--kraft) 55%, var(--kraft-deep) 100%);
+  box-shadow:
+    0 2px 0 rgba(0,0,0,0.18),
+    0 6px 14px -6px rgba(28, 79, 192, 0.55),
+    0 1px 0 rgba(255,255,255,0.25) inset;
+  animation: none !important; /* override the old text-shimmer keyframe */
+  color: transparent; /* neutralize old background-clip:text fallback */
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  transform: rotate(-4deg);
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease;
+}
+
+.brand:hover .brand-mark,
+.login-brand:hover .brand-mark {
+  transform: rotate(0deg) scale(1.06);
+  box-shadow:
+    0 3px 0 rgba(0,0,0,0.18),
+    0 10px 20px -8px rgba(28, 79, 192, 0.6),
+    0 1px 0 rgba(255,255,255,0.3) inset;
+}
+
+.logo-icon { display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+
+/* Bigger badge on the split login screen / auth check card */
+.auth-panel-brand .auth-brand-mark .brand-mark,
+.login-card .login-brand .brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.brand-text { color: var(--paper); }
+.topbar .brand-text { color: var(--paper); }
+
+/* ---------- Topbar: steel-slate instead of near-black kraft-trimmed bar ---------- */
+.topbar {
+  background: linear-gradient(180deg, #22324a 0%, var(--ink) 60%, #16202e 100%);
+  border-bottom: 3px solid var(--kraft-deep);
+}
+
+thead {
+  background: linear-gradient(180deg, #26364f 0%, var(--ink) 100%);
+}
+
+th.sortable:hover { background: #2e415d; }
+
+/* Ghost buttons in the topbar used a literal warm-gold border/hover in style.css */
+.history-all-btn {
+  border-color: rgba(76, 134, 255, 0.5);
+  color: #9db8ff;
+}
+
+.history-all-btn:hover {
+  background: rgba(76, 134, 255, 0.14);
+  border-color: #9db8ff;
+}
+
+/* ---------- Cards / panels: cooler hard-shadow ---------- */
+.search-box,
+.table-section,
+.login-card,
+.modal,
+.calc-fab,
+.calc-panel {
+  box-shadow: none; /* reset so the single rule below is authoritative */
+}
+
+.search-box { box-shadow: 3px 3px 0 var(--kraft-deep), 0 10px 24px -12px rgba(30, 41, 56, 0.25); }
+.search-box:focus-within { box-shadow: 4px 4px 0 var(--accent-deep), 0 0 0 4px rgba(14, 124, 134, 0.22); }
+.table-section { box-shadow: 3px 3px 0 var(--kraft-deep), 0 20px 40px -22px rgba(30, 41, 56, 0.28); }
+.login-card, .auth-card.login-card { box-shadow: 4px 4px 0 var(--kraft-deep), 0 30px 60px -20px rgba(0,0,0,0.45); }
+.modal { box-shadow: 4px 4px 0 var(--kraft-deep), 0 30px 60px -20px rgba(30, 41, 56, 0.4); }
+.calc-fab { box-shadow: 3px 3px 0 var(--kraft-deep), 0 10px 24px -8px rgba(14, 124, 134, 0.4); }
+.calc-panel { box-shadow: 5px 5px 0 var(--kraft-deep), 0 24px 50px -18px rgba(30, 41, 56, 0.35); }
+
+.calc-fab { background: linear-gradient(150deg, var(--accent) 0%, var(--accent-deep) 100%); }
+
+/* ---------- Chips / filters ---------- */
+.chip:hover { border-color: var(--accent); color: var(--accent-deep); }
+.chip.active { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%); }
+
+/* ---------- Sync banner + calendar hovers used literal warm-gold rgba ---------- */
+.sync-banner {
+  background: rgba(47, 111, 237, 0.1);
+  border-color: var(--kraft);
+  color: var(--kraft-deep);
+}
+
+.ledger-preview-row { border-bottom-color: rgba(76, 134, 255, 0.18); }
+.ledger-preview { box-shadow: none; background: rgba(238, 241, 245, 0.06); border-color: rgba(76, 134, 255, 0.25); }
+
+.status-dot {
+  background: #3fc79a;
+  box-shadow: 0 0 0 0 rgba(63, 199, 154, 0.5), 0 0 8px 1px rgba(63, 199, 154, 0.55);
+}
+
+@keyframes statusPulse {
+  0% { box-shadow: 0 0 0 0 rgba(63, 199, 154, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(63, 199, 154, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 199, 154, 0); }
+}
+
+.pin-box:focus { box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.22), 0 2px 6px rgba(0,0,0,0.1); }
+
+/* ---------- Buttons ---------- */
+.btn-primary { background: linear-gradient(180deg, #2b3a52 0%, var(--ink) 100%); }
+.btn-primary:hover { background: #324563; }
+.calc-btn-eq { background: linear-gradient(160deg, var(--accent) 0%, var(--accent-deep) 100%); box-shadow: 0 2px 8px -2px rgba(14, 124, 134, 0.4); }
+.calc-btn-op { color: var(--accent-deep); }
+.calc-btn-op:hover { background: rgba(14, 124, 134, 0.12); }
+
+/* ---------- Scrollbar tint ---------- */
+.table-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--line-strong), var(--kraft-deep));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark { transition: none; }
+}
+
+/* ============================================
+   Mobile product cards — shrink them down.
+   The card layout in style.css (max-width:700px) was sized for a
+   roomier "receipt" look; this tightens spacing, type size, and
+   control sizes so more rows fit on screen without feeling oversized.
+   ============================================ */
+@media (max-width: 700px) {
+  table { font-size: 0.82rem; }
+
+  tbody tr {
+    margin: 6px 8px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+  }
+
+  td {
+    padding: 6px 0;
+    gap: 8px;
+  }
+
+  td::before {
+    font-size: 0.62rem;
+  }
+
+  .col-name {
+    gap: 1px;
+  }
+
+  .col-name .col-name-main,
+  .col-name {
+    line-height: 1.25;
+  }
+
+  .col-qty { font-size: 0.95rem; }
+
+  .col-actions {
+    padding: 7px 0 3px;
+  }
+
+  .row-actions {
+    gap: 4px;
+  }
+
+  .qty-controls {
+    gap: 2px;
+  }
+
+  .qty-btn, .photo-btn, .delete-product-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
+  }
+
+  .qty-detail-btn {
+    padding: 4px 7px;
+    font-size: 0.68rem;
+  }
+
+  .col-code { font-size: 0.78rem; }
+  .col-unit { font-size: 0.78rem; }
+}
+
+@media (max-width: 400px) {
+  tbody tr { margin: 5px 6px; }
+  td { padding: 5px 0; }
+}
